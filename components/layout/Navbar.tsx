@@ -131,7 +131,7 @@ export default function Navbar() {
         transition={{ duration: 0.7, ease, backgroundColor: { duration: 0.3 } }}
         className="fixed inset-x-0 top-0 z-50 font-heading text-[13px] uppercase tracking-wider text-white px-2 md:px-3"
       >
-        <div className="grid h-12 grid-cols-[1fr_auto_1fr] max-md:flex max-md:flex-row-reverse max-md:justify-between items-center">
+        <div className="grid h-10 grid-cols-[1fr_auto_1fr] max-md:flex max-md:flex-row-reverse max-md:justify-between items-center">
           {/* Left: links (desktop) */}
           <nav aria-label="Main" className="hidden lg:block">
             <ul className="flex items-center gap-8 pl-4" onMouseLeave={() => setHovered(null)}>
@@ -152,7 +152,7 @@ export default function Navbar() {
                       aria-expanded={productsOpen}
                       aria-controls="products-panel"
                       onClick={() => setProductsOpen((o) => !o)}
-                      className="flex items-center gap-2 uppercase tracking-wider"
+                      className="flex items-center gap-2 text-sm uppercase tracking-wider"
                     >
                       {item.label}
                       <motion.span animate={{ rotate: productsOpen ? 180 : 0 }} transition={{ duration: 0.3, ease }}>
@@ -175,10 +175,14 @@ export default function Navbar() {
             onClick={() => setMenuOpen((o) => !o)}
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
-            className="relative flex h-5 w-20 items-center gap-2.5 overflow-hidden uppercase tracking-wider lg:hidden"
+            className="relative flex items-center uppercase tracking-wider lg:hidden"
           >
             <span className="size-1.5 shrink-0 bg-white" aria-hidden="true" />
-            <span className="relative h-full flex-1">
+
+            <span className="relative block overflow-hidden">
+              {/* Invisible longest label: sets the width so it fits both words, nothing extra */}
+              <span className="invisible block" aria-hidden="true">Close</span>
+
               <AnimatePresence initial={false}>
                 <motion.span
                   key={menuOpen ? 'close' : 'menu'}
@@ -186,7 +190,7 @@ export default function Navbar() {
                   animate={{ y: 0 }}
                   exit={{ y: '-100%' }}
                   transition={{ duration: 0.35, ease }}
-                  className="absolute inset-0 flex items-center"
+                  className="absolute inset-0 flex items-center justify-end"
                 >
                   {menuOpen ? 'Close' : 'Menu'}
                 </motion.span>
@@ -195,7 +199,7 @@ export default function Navbar() {
           </button>
 
           {/* Center: logo */}
-          <Link href="/" aria-label="Huxley home" className="justify-self-center text-base font-bold tracking-tight">
+          <Link href="/" aria-label="Huxley home" className="justify-self-center text-base font-bold tracking-tight md:scale-x-150">
             HUXLEY
           </Link>
 

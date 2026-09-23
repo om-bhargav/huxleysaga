@@ -67,7 +67,7 @@ export default function EventsSection() {
                 href={event.href}
                 target="_blank"
                 rel="noreferrer"
-                className="group grid gap-4 px-2 pb-2 pt-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-white lg:grid-cols-[1fr_minmax(0,560px)_auto] lg:gap-10"
+                className="group grid gap-4 px-2 py-3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-white lg:grid-cols-[1fr_minmax(0,560px)_auto] lg:gap-10"
               >
                 {/* Small marker to the left of the row */}
                 <span
