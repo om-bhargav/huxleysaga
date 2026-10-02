@@ -3,6 +3,7 @@ import Eleven from "../home/Eleven";
 import Fifth from "../home/Fifth";
 import Forth from "../home/Forth";
 import Hero from "../home/Hero";
+import LiveCampaigns from "../home/LiveCampaigns";
 import Ninth from "../home/Ninth";
 import SagaIntro from "../home/SagaIntro";
 import Second from "../home/Second";
@@ -16,6 +17,7 @@ export default function Home() {
     <div className="grid gap-5">
       <Hero /> {/* ✅ */}
       <div className="relative z-10 grid gap-5 bg-background">
+        <LiveCampaigns />
         <SagaIntro/>
         <Second />
         <Third />{/* ✅ */}

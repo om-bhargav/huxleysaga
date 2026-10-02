@@ -5,46 +5,36 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion, type Variants } from 'framer-motion';
-import { FaInstagram, FaXTwitter, FaYoutube } from 'react-icons/fa6';
+import { FaDiscord, FaInstagram, FaPatreon, FaXTwitter, FaYoutube } from 'react-icons/fa6';
+import type { IconType } from 'react-icons';
 import { FiChevronDown } from 'react-icons/fi';
 import { IoPlayForward } from 'react-icons/io5';
 import { Divider } from '../shared/Divider';
 import { HoverGroup, HoverHighlight } from '../shared/HoverHighlight';
+import { universes } from '@/config/universes';
+import { socialLinks } from '@/config/links';
 
 type NavLink = { label: string; href: string };
 type Product = NavLink & { description: string; image: string };
 type NavItem = NavLink & { children?: Product[] };
 
+/* Specification 3.1: Home plus the six universes, so a visitor can jump between
+   worlds from any page. Universe hrefs come from the one list in config/universes. */
 const navItems: NavItem[] = [
   { label: 'Home', href: '/' },
-  { label: 'Story', href: '/story' },
-  {
-    label: 'Products',
-    href: '/products',
-    children: [
-      {
-        label: 'Huxley: The Oracle',
-        href: '/products/the-oracle',
-        description: 'The epic next chapter in the Huxley universe.',
-        image: 'https://picsum.photos/seed/huxley-oracle/800/600', // replace with your image
-      },
-      {
-        label: 'Huxley: Graphic Novel',
-        href: '/products/huxley',
-        description: 'The original graphic novel that started it all!',
-        image: 'https://picsum.photos/seed/huxley-oracle/800/600', // replace with your image
-      },
-    ],
-  },
-  { label: 'About', href: '/about' },
-  { label: 'Shop', href: '/shop' },
+  ...universes.map((universe) => ({ label: universe.shortName, href: `/${universe.slug}` })),
 ];
 
-const socials = [
-  { label: 'Instagram', href: 'https://www.instagram.com/huxleysaga/', Icon: FaInstagram },
-  { label: 'YouTube', href: 'https://www.youtube.com/@HUXLEYSAGA', Icon: FaYoutube },
-  { label: 'X', href: 'https://x.com/huxleysaga', Icon: FaXTwitter },
-];
+const socialIcons: Record<string, IconType> = {
+  Instagram: FaInstagram,
+  X: FaXTwitter,
+  YouTube: FaYoutube,
+  Discord: FaDiscord,
+  Patreon: FaPatreon,
+};
+
+/* Master list lives in config/links so nav, footer, contact and the final CTA agree */
+const socials = socialLinks.map((link) => ({ ...link, Icon: socialIcons[link.label] }));
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -131,10 +121,19 @@ export default function Navbar() {
         transition={{ duration: 0.7, ease, backgroundColor: { duration: 0.3 } }}
         className="fixed inset-x-0 top-0 z-50 font-heading text-[13px] uppercase tracking-wider text-white px-2 md:px-3"
       >
-        <div className="grid h-10 grid-cols-[1fr_auto_1fr] max-md:flex max-md:flex-row-reverse max-md:justify-between items-center">
-          {/* Left: links (desktop) */}
-          <nav aria-label="Main" className="hidden lg:block">
-            <ul className="flex items-center gap-8 pl-4" onMouseLeave={() => setHovered(null)}>
+        <div className="grid h-10 grid-cols-[auto_1fr_auto] max-md:flex max-md:flex-row-reverse max-md:justify-between items-center gap-4">
+          {/* Left: logo */}
+          <Link
+            href="/"
+            aria-label="Night O'Clock home"
+            className="whitespace-nowrap text-base font-bold tracking-tight max-md:order-last"
+          >
+            Night O&apos;Clock
+          </Link>
+
+          {/* Centre: Home and the six universes (desktop) */}
+          <nav aria-label="Main" className="hidden justify-self-center lg:block">
+            <ul className="flex items-center gap-5 xl:gap-8" onMouseLeave={() => setHovered(null)}>
               {navItems.map((item) => (
                 <li key={item.label} className="relative" onMouseEnter={() => setHovered(item.label)}>
                   {/* Always shown on the page you're on */}
@@ -160,7 +159,11 @@ export default function Navbar() {
                       </motion.span>
                     </button>
                   ) : (
-                    <Link href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+                    <Link
+                      href={item.href}
+                      aria-current={isActive(item.href) ? 'page' : undefined}
+                      className="whitespace-nowrap"
+                    >
                       {item.label}
                     </Link>
                   )}
@@ -197,11 +200,6 @@ export default function Navbar() {
               </AnimatePresence>
             </span>
           </button>
-
-          {/* Center: logo */}
-          <Link href="/" aria-label="Huxley home" className="justify-self-center text-base font-bold tracking-tight md:scale-x-150">
-            HUXLEY
-          </Link>
 
           {/* Right: socials */}
           <ul className="max-md:hidden flex items-center gap-5 justify-self-end sm:gap-7">

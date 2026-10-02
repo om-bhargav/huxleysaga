@@ -43,8 +43,18 @@ function makeFrame(): Frame {
   };
 }
 
-function Cover({ src, alt = '', priority }: { src: string; alt?: string; priority?: boolean }) {
-  return <Image src={src} alt={alt} fill priority={priority} sizes="100vw" className="object-cover" />;
+function Cover({
+  src,
+  alt = '',
+  priority,
+  sizes = '100vw',
+}: {
+  src: string;
+  alt?: string;
+  priority?: boolean;
+  sizes?: string;
+}) {
+  return <Image src={src} alt={alt} fill priority={priority} sizes={sizes} className="object-cover" />;
 }
 
 type GlitchImageProps = {
@@ -52,13 +62,23 @@ type GlitchImageProps = {
   alt?: string;
   className?: string;
   priority?: boolean;
+  /** How wide the image actually renders, for next/image. Leave as is for full-bleed sections. */
+  sizes?: string;
   /** Number of jumpy frames per burst and how long each lasts (ms) */
   frames?: number;
   frameMs?: number;
 };
 
 /** Full-cover image that bursts into an RGB-split, blocky glitch when its scope is triggered. */
-export function GlitchImage({ src, alt = '', className = '', priority, frames = 6, frameMs = 60 }: GlitchImageProps) {
+export function GlitchImage({
+  src,
+  alt = '',
+  className = '',
+  priority,
+  sizes = '100vw',
+  frames = 6,
+  frameMs = 60,
+}: GlitchImageProps) {
   const scoped = useContext(GlitchContext);
   const fallback = useMotionValue(0);
   const pulse = scoped ?? fallback;
@@ -106,13 +126,13 @@ export function GlitchImage({ src, alt = '', className = '', priority, frames = 
       )}
 
       {/* Base image */}
-      <Cover src={src} alt={alt} priority={priority} />
+      <Cover src={src} alt={alt} priority={priority} sizes={sizes} />
 
       {frame && (
         <div aria-hidden="true">
           {/* Whole-image colour split */}
           <div className="absolute inset-0" style={{ filter: `url(#${filterId})` }}>
-            <Cover src={src} />
+            <Cover src={src} sizes={sizes} />
           </div>
 
           {/* Displaced blocks */}
@@ -126,7 +146,7 @@ export function GlitchImage({ src, alt = '', className = '', priority, frames = 
                 filter: s.rgb ? `url(#${filterId})` : undefined,
               }}
             >
-              <Cover src={src} />
+              <Cover src={src} sizes={sizes} />
             </div>
           ))}
         </div>

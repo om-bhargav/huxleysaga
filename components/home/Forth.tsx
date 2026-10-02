@@ -94,17 +94,23 @@ export default function CharactersSection({ characters = defaultCharacters }: { 
 
   // Keep the active thumbnail in view (skipped on first load so the page doesn't jump)
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const firstRun = useRef(true);
-  useEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
-    thumbRefs.current[view.char]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-  }, [view.char]);
-
   const hidden = view.dir === 'up' ? 'inset(100% 0% 0% 0%)' : 'inset(0% 0% 0% 100%)';
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const prevChar = useRef(view.char);
+  useEffect(() => {
+    if (prevChar.current === view.char) return; // no change, so no scroll (safe under Strict Mode)
+    prevChar.current = view.char;
 
+    const scroller = scrollerRef.current;
+    const thumb = thumbRefs.current[view.char];
+    if (!scroller || !thumb) return;
+
+    const s = scroller.getBoundingClientRect();
+    const t = thumb.getBoundingClientRect();
+    const behavior = reduceMotion ? 'auto' : 'smooth';
+    if (t.left < s.left) scroller.scrollBy({ left: t.left - s.left, behavior });
+    else if (t.right > s.right) scroller.scrollBy({ left: t.right - s.right, behavior });
+  }, [view.char, reduceMotion]);
   return (
     <section className="px-3 pb-16 pt-5 font-heading uppercase text-white">
       <Divider />
@@ -117,26 +123,26 @@ export default function CharactersSection({ characters = defaultCharacters }: { 
           <div className="relative aspect-[4/5] overflow-hidden bg-black">
             {/* Image layers; `isolate` keeps their growing z-index inside this box */}
             <div className="absolute inset-0 isolate">
-            <AnimatePresence initial={false}>
-              <motion.div
-                key={view.layer}
-                style={{ zIndex: view.layer }}
-                initial={{ clipPath: hidden }}
-                animate={{ clipPath: 'inset(0% 0% 0% 0%)' }}
-                exit={{ filter: 'brightness(0.5)', transition: { duration: REVEAL, ease } }}
-                transition={{ duration: REVEAL, ease }}
-                className="absolute inset-0"
-              >
-                <Image
-                  src={character.images[view.img]}
-                  alt={`${character.name}, image ${view.img + 1}`}
-                  fill
-                  priority={view.layer === 0}
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-cover"
-                />
-              </motion.div>
-            </AnimatePresence>
+              <AnimatePresence initial={false}>
+                <motion.div
+                  key={view.layer}
+                  style={{ zIndex: view.layer }}
+                  initial={{ clipPath: hidden }}
+                  animate={{ clipPath: 'inset(0% 0% 0% 0%)' }}
+                  exit={{ filter: 'brightness(0.5)', transition: { duration: REVEAL, ease } }}
+                  transition={{ duration: REVEAL, ease }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src={character.images[view.img]}
+                    alt={`${character.name}, image ${view.img + 1}`}
+                    fill
+                    priority={view.layer === 0}
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Preload this character's other images so dot changes are instant */}
@@ -228,7 +234,7 @@ export default function CharactersSection({ characters = defaultCharacters }: { 
           </button>
         </div>
 
-        <div className="flex min-w-0 flex-1 gap-3.5 overflow-x-auto [contain:inline-size] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div ref={scrollerRef} className="flex min-w-0 flex-1 gap-3.5 overflow-x-auto [contain:inline-size] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {characters.map((c, i) => {
             const active = i === view.char;
             return (

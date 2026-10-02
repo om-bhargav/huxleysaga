@@ -91,7 +91,7 @@ export default function TestimonialsSection({ slides = defaultSlides }: { slides
             transition={{ duration: REVEAL + 0.6, ease }}
             className="absolute inset-0"
           >
-            <Image src={slide.image} alt="" fill priority sizes="100vw" className="object-cover" />
+            <Image unoptimized src={slide.image} alt="" fill priority sizes="100vw" className="object-cover" />
           </motion.div>
         </motion.div>
       </AnimatePresence>
@@ -100,7 +100,7 @@ export default function TestimonialsSection({ slides = defaultSlides }: { slides
       {/* Preload every slide so a new one is ready before it's revealed */}
       <div aria-hidden="true" className="pointer-events-none absolute size-px opacity-0">
         {slides.map((s) => (
-          <Image key={s.image} src={s.image} alt="" fill priority sizes="100vw" />
+          <Image unoptimized key={s.image} src={s.image} alt="" fill priority sizes="100vw" />
         ))}
       </div>
 
@@ -129,9 +129,9 @@ export default function TestimonialsSection({ slides = defaultSlides }: { slides
                 <span className="sr-only">“{slide.quote}”</span>
                 <span aria-hidden="true">
                   {`“${slide.quote}”`.split(' ').map((word, i, words) => (
-                    <motion.span key={i} variants={flicker} custom={wordDelay(i)} className="inline-block">
+                    <motion.span key={i} variants={flicker} custom={wordDelay(i)} className="inline-block whitespace-pre">
                       {word}
-                      {i < words.length - 1 && '\u00A0'}
+                      {i < words.length - 1 && ' '}
                     </motion.span>
                   ))}
                 </span>

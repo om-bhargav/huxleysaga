@@ -46,9 +46,9 @@ export default function SagaIntro({
           <span className="sr-only">{text}</span>
           <span aria-hidden="true">
             {words.map((word, i) => (
-              <motion.span key={i} variants={flicker} custom={wordDelay(i)} className="inline-block">
+              <motion.span key={i} variants={flicker} custom={wordDelay(i)} className="inline-block whitespace-pre">
                 {word}
-                {i < words.length - 1 && '\u00A0'}
+                {i < words.length - 1 && ' '}
               </motion.span>
             ))}
           </span>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { nbArchitekt, timesNewRoman } from '@/fonts';
+import { universeFontVariables } from '@/fonts/universes';
 import Providers from '@/components/providers';
 
 import './globals.css';
@@ -16,7 +17,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${nbArchitekt.variable} ${timesNewRoman.variable} h-full antialiased`}
+      className={`${nbArchitekt.variable} ${timesNewRoman.variable} ${universeFontVariables} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
