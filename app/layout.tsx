@@ -3,12 +3,12 @@ import type { Metadata } from 'next';
 import { nbArchitekt, timesNewRoman } from '@/fonts';
 import { universeFontVariables } from '@/fonts/universes';
 import Providers from '@/components/providers';
-
+import { SITE_NAME } from '@/config';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Huxley Saga',
-  description: 'Huxley Saga',
+  title: SITE_NAME,
+  description: SITE_NAME,
 };
 
 export default function RootLayout({

@@ -1,21 +1,23 @@
 "use client";
+import { SITE_NAME } from "@/config";
 import { Divider } from "../shared/Divider";
 import { StretchText } from "../shared/StrechText";
+import Link from "next/link";
 
 const navColumns = [
   { title: "Explore", links: ["Home", "Story", "Shop"] },
-  { title: "Products", links: ["Huxley", "The Oracle"] },
+  { title: "Products", links: [SITE_NAME, "The Oracle"] },
   { title: "Company", links: ["About", "Contact"] },
   { title: "Social", links: ["YouTube", "Instagram", "X"] },
 ];
 
 export default function Footer() {
   return (
-    <footer className="px-3 pb-3 pt-4 text-[11px] uppercase tracking-wide fixed inset-x-0 bottom-0 z-4 bg-background h-[400px]">
+    <footer className="px-3 pb-3 pt-4 text-[11px] uppercase tracking-wide fixed inset-x-0 bottom-0 z-4 bg-background h-[360px]">
       {/* Big wordmark */}
       <div className="relative pb-2 grid place-items-center">
-        <StretchText className="font-heading text-[16vw] font-bold leading-[0.78]">
-          HUXLEY
+        <StretchText className="font-heading text-[12vw] font-bold leading-[0.78]">
+          {SITE_NAME}
         </StretchText>
       </div>
 
@@ -32,9 +34,9 @@ export default function Footer() {
               <ul className="flex flex-col gap-3 font-semibold lg:gap-2">
                 {col.links.map((link) => (
                   <li key={link}>
-                    <a href={`/${link.toLocaleLowerCase()}`} className="tracking-widest transition-opacity hover:opacity-60">
+                    <Link href={`/${link.toLocaleLowerCase()}`} className="tracking-widest transition-opacity hover:opacity-60">
                       {link}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -64,10 +66,10 @@ export default function Footer() {
       <Divider />
 
       <div className="flex flex-col gap-2 pt-3 text-neutral-400 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-        <p className="sm:flex-1">© 2026 Huxley LLC. All rights reserved</p>
+        <p className="sm:flex-1">© 2026 {SITE_NAME} LLC. All rights reserved</p>
         <ul className="flex gap-4 sm:gap-3 lg:mr-auto lg:w-[460px]">
-          <li><a href="#" className="hover:text-white">Terms</a></li>
-          <li><a href="#" className="hover:text-white">Privacy</a></li>
+          <li><Link href="#" className="hover:text-white">Terms</Link></li>
+          <li><Link href="#" className="hover:text-white">Privacy</Link></li>
         </ul>
         <p>Site by Om Bhargav</p>
       </div>

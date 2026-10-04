@@ -119,7 +119,7 @@ export default function Navbar() {
         initial={{ y: '-100%', opacity: 0, backgroundColor: 'rgba(0,0,0,0)' }}
         animate={{ y: 0, opacity: 1, backgroundColor: productsOpen ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0)' }}
         transition={{ duration: 0.7, ease, backgroundColor: { duration: 0.3 } }}
-        className="fixed inset-x-0 top-0 z-50 font-heading text-[13px] uppercase tracking-wider text-white px-2 md:px-3"
+        className="fixed inset-x-0 backdrop-blur-2xl top-0 z-50 font-heading text-[13px] uppercase tracking-wider text-white px-2 md:px-3"
       >
         <div className="grid h-10 grid-cols-[auto_1fr_auto] max-md:flex max-md:flex-row-reverse max-md:justify-between items-center gap-4">
           {/* Left: logo */}

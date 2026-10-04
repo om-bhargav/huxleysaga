@@ -155,5 +155,5 @@ body {
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }

@@ -95,11 +95,11 @@ function Panel({ item, index, total }: { item: ShowcaseItem; index: number; tota
         </motion.div>
 
         {/* Position indicator: tall bar = this panel */}
-        <div aria-hidden="true" className="absolute bottom-10 right-4 flex flex-col items-center gap-1.5">
+        {/* <div aria-hidden="true" className="absolute bottom-10 right-4 flex flex-col items-center gap-1.5">
           {Array.from({ length: total }, (_, i) => (
             <span key={i} className={i === index ? 'h-5 w-2 bg-white' : 'size-2 bg-white/40'} />
           ))}
-        </div>
+        </div> */}
       </section>
     </GlitchScope>
   );

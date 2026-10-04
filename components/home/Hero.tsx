@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { FiChevronsDown } from 'react-icons/fi';
 import { StretchText } from '../shared/StrechText';
+import { SITE_NAME } from '@/config';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -14,10 +15,9 @@ type HeroProps = {
   video?: string;
   tagline?: string;
 };
-const word = 'HUXLEY';
+const word = SITE_NAME;
 /* Letter positions (1 = H ... 6 = Y) in the order they appear: H, E, U, Y, L, X */
-const revealOrder = [1, 5, 2, 6, 4, 3];
-const wordDone = 0.2 + (word.length - 1) * 0.50 + 0.6;
+const revealOrder = [3, 10, 1, 7, 13, 4, 11, 2, 9, 5, 12, 8, 6];
 /**
  * Full-screen hero fixed behind the page, like a reveal footer but at the top.
  * It reserves its own space with a spacer, so the page scrolls normally,
@@ -75,7 +75,7 @@ export default function Hero({
 
         {/* Content */}
         <div className="relative flex h-full flex-col justify-between px-4 pb-5 pt-2.5">
-          <h1 className="sr-only">Huxley</h1>
+          <h1 className="sr-only">{SITE_NAME}</h1>
 
           {/* Wordmark rises in on load */}
           <div aria-hidden="true">
