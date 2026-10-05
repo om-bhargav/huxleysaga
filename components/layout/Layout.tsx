@@ -13,7 +13,8 @@ export default function Layout({ children }: ChildrenProps) {
           relative
           z-5
           bg-background
-          mb-90
+          mb-120
+          md:mb-90
           shadow-[0_10px_20px_rgba(0,0,0,0.1)]
           "
       >
