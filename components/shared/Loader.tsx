@@ -231,7 +231,11 @@ export default function ShatterLoader({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="relative aspect-square w-[min(420px,80vw)] overflow-hidden bg-black"
+            className="relative aspect-square overflow-hidden bg-black"
+            // Fits the screen both ways: never wider than 80% of the width or
+            // taller than ~60% of the height (so it clears the progress row
+            // in landscape phones too)
+            style={{ width: "min(420px, 80vw, 60dvh)" }}
           >
             {/* All images are mounted (so they preload) and only the
                 current one is visible — switches instantly. */}
@@ -267,9 +271,24 @@ export default function ShatterLoader({
             <div className="absolute inset-0 bg-black/10" />
           </motion.div>
 
-          {/* BOTTOM CENTER BAR */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2">
-            <div className="h-[2px] w-[200px] overflow-hidden bg-white/10">
+          {/* PROGRESS ROW
+              Phones: bar on the left, number on the right, in one row so
+              they can never overlap. Larger screens: bar centered at the
+              bottom, number in the bottom-right corner. Padding includes
+              the safe area so nothing sits under a notch or home bar. */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 px-5 sm:px-8"
+            style={{
+              paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",
+              paddingLeft: "max(1.25rem, env(safe-area-inset-left))",
+              paddingRight: "max(1.25rem, env(safe-area-inset-right))",
+            }}
+          >
+            {/* BAR */}
+            <div
+              className="mb-[0.45em] h-[2px] min-w-0 max-w-[200px] flex-1 overflow-hidden bg-white/10 sm:absolute sm:left-1/2 sm:mb-0 sm:w-[200px] sm:flex-none sm:-translate-x-1/2"
+              style={{ bottom: "calc(2.5rem + env(safe-area-inset-bottom))" }}
+            >
               <motion.div
                 className="h-full bg-white"
                 initial={{ width: "0%" }}
@@ -277,11 +296,14 @@ export default function ShatterLoader({
                 transition={{ ease: "easeOut", duration: 0.2 }}
               />
             </div>
-          </div>
 
-          {/* BOTTOM RIGHT NUMBER */}
-          <div className="absolute bottom-8 right-8 text-5xl font-black tabular-nums tracking-tight text-white md:text-7xl">
-            <ProgressDigits value={progress} />
+            {/* NUMBER — scales with both width and height */}
+            <div
+              className="ml-auto shrink-0 font-black tabular-nums tracking-tight text-white sm:mb-3"
+              style={{ fontSize: "clamp(2.25rem, min(10vw, 11dvh), 4.5rem)" }}
+            >
+              <ProgressDigits value={progress} />
+            </div>
           </div>
         </motion.div>
       )}
