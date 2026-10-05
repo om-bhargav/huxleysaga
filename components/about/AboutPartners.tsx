@@ -17,7 +17,7 @@ const partners: { name: string; href: string }[] = [
 /** The partner row, running past on a loop the way the live page repeats it. */
 export default function AboutPartners() {
   return (
-    <section className="overflow-hidden bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="overflow-hidden px-3 font-heading uppercase">
       <SectionIntro title="Partners" aside={`[${String(partners.length).padStart(2, '0')}]`} />
 
       <motion.div

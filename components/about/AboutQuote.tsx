@@ -6,7 +6,7 @@ import { flicker, wordDelay } from '@/components/shared/SectionIntro'; // adjust
 
 /* Placeholder copy: swap in the real pull-quote */
 const quote =
-  'Huxley is one of those rare worlds that feels lived in from the first page. You can tell every machine in it was designed by someone who knows exactly what it was built to do.';
+  'Huxley is one of those rare worlds that feels lived in from the first page.';
 const author = 'Nikita Buyanov';
 const role = 'Director of Escape from Tarkov';
 
@@ -15,7 +15,7 @@ export default function AboutQuote() {
   const words = quote.split(' ');
 
   return (
-    <section className="bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="px-3  font-heading uppercase">
       <Divider />
 
       <motion.figure

@@ -54,7 +54,7 @@ const events: Event[] = [
 /** Appearances, dated the way the live page dates them. */
 export default function AboutEvents() {
   return (
-    <section className="bg-black px-3 pb-24 pt-20 font-heading uppercase">
+    <section className="px-3 font-heading uppercase">
       <SectionIntro title="Events" aside={`[${String(events.length).padStart(2, '0')}]`} />
 
       <motion.ul

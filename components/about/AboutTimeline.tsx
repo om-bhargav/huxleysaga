@@ -114,7 +114,7 @@ function RowThumb({ entry }: { entry: Entry }) {
 /** The saga year by year, as ruled rows: still, year, title, note. */
 export default function AboutTimeline() {
   return (
-    <section className="bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="px-3 font-heading uppercase">
       <SectionIntro title="Huxley Timeline" aside={`[${String(entries.length).padStart(2, '0')}]`} />
 
       <motion.ol

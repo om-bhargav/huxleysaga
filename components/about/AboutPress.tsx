@@ -56,7 +56,7 @@ const features: Feature[] = [
 /** Press, as ruled rows: outlet, headline, and a view link out. */
 export default function AboutPress() {
   return (
-    <section className="bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="px-3 font-heading uppercase">
       <SectionIntro title="Press" aside={`[${String(features.length).padStart(2, '0')}]`} />
 
       <motion.ul

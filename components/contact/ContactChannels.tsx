@@ -48,7 +48,7 @@ const channels: Channel[] = [
 /** Who to write to for what, each row opening a mail draft with the subject already set. */
 export default function ContactChannels() {
   return (
-    <section className="bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="px-3 font-heading uppercase">
       <SectionIntro title="What Are You After" aside={`[${String(channels.length).padStart(2, '0')}]`} />
 
       <motion.ul

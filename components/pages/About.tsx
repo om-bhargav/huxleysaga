@@ -9,7 +9,7 @@ import AboutTimeline from "../about/AboutTimeline";
 
 export default function About() {
   return (
-    <div className="relative z-10 grid gap-5 bg-background">
+    <div className="relative z-10 grid gap-8 md:gap-20 bg-background">
       <AboutHero />
       <AboutHistory />
       <AboutTimeline />
@@ -19,5 +19,5 @@ export default function About() {
       <AboutStats />
       <AboutEvents />
     </div>
-  )
+  ) 
 }

@@ -178,7 +178,7 @@ export default function Navbar() {
             onClick={() => setMenuOpen((o) => !o)}
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
-            className="relative flex items-center uppercase tracking-wider lg:hidden"
+            className="relative flex gap-2 items-center uppercase tracking-wider lg:hidden"
           >
             <span className="size-1.5 shrink-0 bg-white" aria-hidden="true" />
 

@@ -3,20 +3,21 @@
 import { motion } from 'framer-motion';
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
 import { flicker } from '@/components/shared/SectionIntro'; // adjust path
+import { CONTACT_EMAIL } from '@/components/contact/ContactIntro'; // adjust path
 
-/* Placeholder art: swap in huxley-about-1 */
-const banner = 'https://picsum.photos/seed/huxley-about-1/1920/1080';
+/* Placeholder art: swap in your contact banner */
+const banner = 'https://picsum.photos/seed/huxley-contact-1/1920/1080';
 
-/* The same two facts the live page lists */
+/* Placeholder copy: swap in your real text */
 const meta: { label: string; value: string; href?: string }[] = [
-  { label: 'Created by', value: 'Ben Mauro' },
-  { label: 'Since', value: '2014' },
+  { label: 'Email', value: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
+  { label: 'Replies', value: 'Within 2 business days' },
 ];
 
-/** Opening plate for the about page: banner, title, the key facts, and a jump to the history. */
-export default function AboutHero() {
+/** Opening plate for the contact page: banner, title, the address, and a jump to the form. */
+export default function ContactHero() {
   return (
-    <section className="bg-black font-heading uppercase">
+    <section className="font-heading uppercase">
       {/*
         Fills the screen on every device. min-h (not h) so on a short phone in landscape
         the frame grows to fit the text instead of clipping the title.
@@ -29,7 +30,7 @@ export default function AboutHero() {
           <RevealImage
             src={banner}
             alt=""
-            direction="right-left"
+            direction="left-right"
             trigger="mount"
             priority
             sizes="100vw"
@@ -59,7 +60,7 @@ export default function AboutHero() {
             custom={0.1}
             className="mt-3 text-[clamp(2.5rem,9vw,7rem)] leading-[0.9] tracking-wide sm:text-[clamp(3rem,7vw,7rem)]"
           >
-            About
+            Contact
           </motion.h1>
           <motion.p
             variants={flicker}
@@ -67,7 +68,7 @@ export default function AboutHero() {
             className="mt-3 max-w-[48ch] text-[11px] leading-relaxed tracking-widest text-white/70 lg:text-xs"
           >
             {/* Placeholder copy: swap in your real text */}
-            An original sci-fi universe created by Ben Mauro, built in the open since 2014.
+            Press, licensing, wholesale or an order that went sideways. One inbox, read by the people who can help.
           </motion.p>
 
           <motion.div
@@ -75,8 +76,8 @@ export default function AboutHero() {
             custom={0.4}
             className="mt-5 flex flex-col gap-5 border-t border-white/15 pt-4 sm:mt-6 sm:flex-row sm:items-end sm:justify-between"
           >
-            {/* Two short facts: side by side even on small phones, a loose row from tablet up */}
-            <dl className="grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:gap-x-10 sm:gap-y-3">
+            {/* Stacked on small phones, side by side from ~420px, a loose row from tablet up */}
+            <dl className="grid gap-4 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:gap-x-10 sm:gap-y-3">
               {meta.map((item) => (
                 <div key={item.label} className="min-w-0">
                   <dt className="text-[10px] tracking-widest text-white/40 sm:text-[11px]">{item.label}</dt>
@@ -84,7 +85,7 @@ export default function AboutHero() {
                     {item.href ? (
                       <a
                         href={item.href}
-                        className="transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white"
+                        className="break-all normal-case transition-opacity hover:opacity-60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white"
                       >
                         {item.value}
                       </a>
@@ -97,7 +98,7 @@ export default function AboutHero() {
             </dl>
 
             <p className="inline-flex shrink-0 items-center gap-2 self-start text-[10px] tracking-widest text-white/70 transition-colors hover:text-white sm:self-auto sm:text-[11px]">
-              Read the history
+              Write to us
               <span aria-hidden="true" className="inline-block animate-bounce">
                 ↓
               </span>

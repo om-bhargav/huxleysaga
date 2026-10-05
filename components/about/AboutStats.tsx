@@ -17,7 +17,7 @@ const metrics: Metric[] = [
 /** The four headline numbers, counting up as they come into view. */
 export default function AboutStats() {
   return (
-    <section className="bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="px-3 font-heading uppercase">
       <SectionIntro title="By The Numbers" />
 
       <motion.dl

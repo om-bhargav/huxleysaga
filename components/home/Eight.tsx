@@ -65,7 +65,7 @@ function CornerTicks() {
 
 export default function StatsSection() {
   return (
-    <section className="bg-black px-3 pb-14 pt-5 font-heading uppercase text-white">
+    <section className="px-3 pb-14 pt-5 font-heading uppercase text-white">
       <Divider />
 
       <motion.h2
@@ -89,7 +89,7 @@ export default function StatsSection() {
           <motion.li
             key={stat.label}
             variants={card}
-            className="relative flex min-h-[250px] flex-col border border-white/10 bg-neutral-950 p-3"
+            className="relative flex min-h-[250px] flex-col border border-white/10 p-3"
           >
             <CornerTicks />
 

@@ -19,7 +19,7 @@ const channels: Channel[] = [
 /** Where the work gets posted first, for anything that does not need a reply. */
 export default function ContactFollow() {
   return (
-    <section className="bg-black px-3 pb-24 pt-20 font-heading uppercase">
+    <section className="px-3 font-heading uppercase">
       <SectionIntro
         title="Follow The Saga"
         /* Placeholder copy: swap in your real text */
