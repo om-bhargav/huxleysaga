@@ -7,6 +7,8 @@ import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
 import { RollingNumber } from '@/components/shared/RollingNumber'; // adjust path
 import { displayFont } from '@/fonts/universes'; // adjust path
 import { studioStats, universes } from '@/config/universes'; // adjust path
+import UniversesHero from '../universes/UniverseHero';
+import UniverseCard from '../universes/UniverseCard';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -21,8 +23,9 @@ const rise = {
  */
 export default function Universes() {
   return (
-    <div className="relative z-10 grid gap-5 bg-background">
-      <section className="bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <div className="relative z-10 grid gap-8 md:gap-20 bg-background">
+      <UniversesHero />
+      <section className="px-3 font-heading uppercase">
         <SectionIntro
           title="Our Universes"
           text="Six worlds. One studio. Each comic is its own universe, with its own characters, stories and style, made to get lost in."
@@ -58,7 +61,7 @@ export default function Universes() {
       </section>
 
       {/* The six */}
-      <section className="bg-black px-3 pb-24 font-heading uppercase">
+      <section className="px-3 font-heading uppercase">
         <motion.ul
           initial="hidden"
           whileInView="show"
@@ -66,65 +69,8 @@ export default function Universes() {
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1 } } }}
           className="grid gap-3 lg:grid-cols-2"
         >
-          {universes.map((universe) => (
-            <motion.li key={universe.slug} variants={rise}>
-              <Link
-                href={`/${universe.slug}`}
-                className="group/world relative flex h-full flex-col overflow-hidden border focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white"
-                style={{
-                  backgroundColor: universe.palette.ink,
-                  color: universe.palette.paper,
-                  borderColor: `color-mix(in srgb, ${universe.palette.paper} 20%, transparent)`,
-                }}
-              >
-                <div className="relative aspect-video overflow-hidden">
-                  <Image
-                    src={universe.hero.poster}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1024px) 48vw, 94vw"
-                    className="object-cover transition-transform duration-700 group-hover/world:scale-105"
-                  />
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0"
-                    style={{ background: `linear-gradient(to top, ${universe.palette.ink}, transparent 65%)` }}
-                  />
-                  <span
-                    className="absolute left-3 top-3 border px-2 py-1 text-[10px] tracking-widest sm:text-[11px]"
-                    style={{ borderColor: universe.palette.accent, color: universe.palette.accent }}
-                  >
-                    {universe.genre}
-                  </span>
-                </div>
-
-                <div className="flex flex-1 flex-col p-3.5 lg:p-6">
-                  {universe.overline && (
-                    <span className="text-[10px] tracking-widest opacity-60 sm:text-[11px]">{universe.overline}</span>
-                  )}
-
-                  <span
-                    style={{ fontFamily: displayFont[universe.display] }}
-                    className="mt-2 text-[clamp(1.75rem,3.6vw,3rem)] leading-none"
-                  >
-                    {universe.name}
-                  </span>
-
-                  <span className="mt-4 flex-1 text-xs leading-relaxed tracking-wider opacity-70 sm:text-sm">
-                    {universe.hook}
-                  </span>
-
-                  <span
-                    className="mt-8 inline-flex items-center gap-3 text-[11px] tracking-widest sm:text-[13px]"
-                    style={{ color: universe.palette.accent }}
-                  >
-                    <span aria-hidden="true">[</span>
-                    Explore universe
-                    <span aria-hidden="true">]</span>
-                  </span>
-                </div>
-              </Link>
-            </motion.li>
+          {universes.map((universe,idx) => (
+            <UniverseCard direction={idx%2 === 0 ? "left-right":"right-left"} key={idx} universe={universe}/>
           ))}
         </motion.ul>
       </section>

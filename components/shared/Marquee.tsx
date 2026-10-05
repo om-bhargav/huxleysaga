@@ -54,8 +54,6 @@ export function Marquee({ children, speed = 40, gap = 12, fadeEdges = true, clas
   // Enough passes to cover the screen plus one loop length, so the row never runs dry.
   // Nothing moves under reduced motion, so one pass is enough there.
   // Measurement only lands after mount, so the first render always matches the server.
-  // Capped: if an ancestor ever lets this row widen the page, more passes would widen it
-  // further and the two would feed each other. Put `overflow-hidden` on the section too.
   const copies =
     loopWidth === 0 ? 2 : reduceMotion ? 1 : Math.min(12, Math.max(2, Math.ceil(viewportWidth / loopWidth) + 1));
 
@@ -80,7 +78,15 @@ export function Marquee({ children, speed = 40, gap = 12, fadeEdges = true, clas
       onPointerUp={resume}
       onFocusCapture={pause}
       onBlurCapture={resume}
-      className={`relative overflow-hidden ${className}`}
+      /*
+        The fix for the page widening on phones:
+        overflow-hidden only clips what you see. The `w-max` track still reports its full width
+        up the tree, so a flex or grid parent (the jump menu, UniverseTheme) grew to fit it and
+        stretched the whole page sideways. contain-inline-size tells the browser this box's width
+        never depends on its content, so it simply takes the width it's given and clips the rest.
+        min-w-0 / max-w-full cover parents that are flex or grid items themselves.
+      */
+      className={`relative w-full min-w-0 max-w-full overflow-hidden [contain:inline-size] ${className}`}
     >
       <div ref={viewportRef} className={reduceMotion ? 'overflow-x-auto' : undefined}>
         <motion.div style={{ x, gap }} className="flex w-max px-3">

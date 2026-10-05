@@ -45,8 +45,8 @@ export type Universe = {
   display: 'rye' | 'bebas' | 'cinzel' | 'rajdhani' | 'anton' | 'garamond';
   /** Spec's design-direction notes, surfaced in the page as production notes */
   direction: { type: string; motion: string; cursor: string; reveal: string; gallery: string };
-  hero: { poster: string; videoNote: string };
-  story: { headline: string; text: string; more?: string };
+  hero: { poster: string; videoNote: string;video?: string;};
+  story: { headline: string; text: string; more?: string;image?: string; };
   characters: Character[];
   gallery: { title: string; images: { src: string; caption: string }[]; note?: string };
   campaign: Issue[];

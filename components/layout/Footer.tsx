@@ -5,7 +5,7 @@ import { StretchText } from "../shared/StrechText";
 import Link from "next/link";
 
 const navColumns = [
-  { title: "Explore", links: ["Home", "Story", "Shop"] },
+  { title: "Explore", links: ["Home", "Universes", "Shop"] },
   { title: "Products", links: [SITE_NAME, "The Oracle"] },
   { title: "Company", links: ["About", "Contact"] },
   { title: "Social", links: ["YouTube", "Instagram", "X"] },
@@ -13,7 +13,7 @@ const navColumns = [
 
 export default function Footer() {
   return (
-    <footer className="px-3 pb-3 pt-4 text-[11px] uppercase tracking-wide fixed inset-x-0 bottom-0 z-4 bg-background h-120 md:h-90">
+    <footer className="px-3 pb-3 pt-4 text-[11px] uppercase tracking-wide fixed inset-x-0 bottom-0 z-4 bg-background h-122 md:h-90">
       {/* Big wordmark */}
       <div className="relative pb-2 grid place-items-center">
         <StretchText className="font-heading text-[12vw] font-bold leading-[0.78]">
