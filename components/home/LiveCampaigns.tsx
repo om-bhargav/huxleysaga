@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode, type UIEvent } from 'react';
+import { useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // adjust path
 import { RollingNumber } from '@/components/shared/RollingNumber'; // adjust path
@@ -8,6 +8,10 @@ import { BracketButton } from '@/components/shared/BracketButton'; // adjust pat
 import { cardReveal } from '@/components/products/ProductCard'; // adjust path
 import { SectionIntro, flicker } from '@/components/shared/SectionIntro'; // adjust path
 import { Marquee } from '@/components/shared/Marquee'; // adjust path
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+import type { Swiper as SwiperInstance } from 'swiper';
+import 'swiper/css';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -74,10 +78,10 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CampaignCard({ campaign }: { campaign: Campaign }) {
+function CampaignCard({ campaign, className = 'w-full md:w-[min(86vw,480px)]' }: { campaign: Campaign; className?: string }) {
   return (
     <GlitchScope>
-      <article className="flex w-[min(86vw,480px)] shrink-0 flex-col border border-white/10 bg-neutral-950 text-white">
+      <article className={`flex shrink-0 flex-col border border-white/10 bg-neutral-950 text-white ${className}`}>
         {/* Still from the campaign, glitches when the link below is hovered */}
         <div className="relative aspect-3/2 overflow-hidden">
           <GlitchImage src={campaign.image} alt={campaign.title} sizes="(min-width: 560px) 480px, 86vw" />
@@ -142,40 +146,51 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
   );
 }
 
+// How long each campaign stays on screen before the swiper moves on
+const AUTOPLAY_DELAY = 12_000; // ms
+
 /**
- * Phones: one card at a time, swiped by hand and snapping into place.
+ * Phones: one card at a time in a Swiper, dragged by hand or advancing on its own.
  * There is no hover on a touch screen, so a drifting row can't be stopped there.
  */
 function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
+  const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [active, setActive] = useState(0);
 
-  const onScroll = (e: UIEvent<HTMLDivElement>) => {
-    const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
-    const max = scrollWidth - clientWidth;
-    if (max > 0) setActive(Math.round((scrollLeft / max) * (campaigns.length - 1)));
-  };
-
   return (
-    <div className="md:hidden">
-      {/* -mx-3 + px-3: the row bleeds to the screen edges but the first card still lines up with the page */}
-      <div
-        onScroll={onScroll}
-        className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    <div className="md:hidden md:grid">
+      <Swiper
+        modules={[Autoplay]}
+        onSwiper={setSwiper}
+        onSlideChange={(instance) => setActive(instance.activeIndex)}
+        slidesPerView={1}
+        spaceBetween={12}
+        rewind
+        autoplay={{ delay: AUTOPLAY_DELAY, disableOnInteraction: false }}
       >
         {campaigns.map((campaign) => (
-          <div key={campaign.title} className="flex shrink-0 snap-center">
+          /* Swiper sets the slide to full width; *:w-full stretches whatever wraps the card; h-auto + flex keeps heights equal */
+          <SwiperSlide key={campaign.title} className="flex! h-auto! *:w-full">
             <CampaignCard campaign={campaign} />
-          </div>
+          </SwiperSlide>
         ))}
-      </div>
+      </Swiper>
 
-      {/* Position: one bar per campaign, the current one lit */}
-      <div aria-hidden="true" className="mt-4 flex gap-1.5">
+      {/* Position: one bar per campaign, the current one lit. Tap a bar to jump to it. */}
+      <div className="mt-2 flex">
         {campaigns.map((campaign, i) => (
-          <span
+          <button
             key={campaign.title}
-            className={`h-0.5 w-6 transition-colors duration-300 ${i === active ? 'bg-white' : 'bg-white/15'}`}
-          />
+            type="button"
+            aria-label={`Show ${campaign.title}`}
+            aria-current={i === active}
+            onClick={() => swiper?.slideTo(i)}
+            className="py-2 pr-1.5"
+          >
+            <span
+              className={`block h-0.5 w-6 transition-colors duration-300 ${i === active ? 'bg-white' : 'bg-white/15'}`}
+            />
+          </button>
         ))}
       </div>
     </div>
