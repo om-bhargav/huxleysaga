@@ -3,9 +3,10 @@
 import { motion } from 'framer-motion';
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
 import { flicker } from '@/components/shared/SectionIntro'; // adjust path
+import { ABOUT_BANNER } from '@/lib/assets';
 
-/* Placeholder art: swap in huxley-about-1 */
-const banner = 'https://picsum.photos/seed/huxley-about-1/1920/1080';
+/* Set in lib/assets, so the loader fetches it up front */
+const banner = ABOUT_BANNER;
 
 /* The same two facts the live page lists */
 const meta: { label: string; value: string; href?: string }[] = [

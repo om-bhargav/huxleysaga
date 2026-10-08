@@ -2,7 +2,14 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {
+  LOADER_IMAGES as IMAGES,
+  LOADER_IMAGE_SIZES,
+  getAssets,
+  preloadAssets,
+} from "@/lib/assets";
 import { AppStore } from "@/store/AppContext";
 
 /* ------------------------------------------------------------------ */
@@ -100,15 +107,8 @@ function ProgressDigits({
 /* LOADER                                                              */
 /* ------------------------------------------------------------------ */
 
-// Images shown in the center while loading. Cycles every IMAGE_INTERVAL ms,
-// wrapping back to the first after the last.
-const IMAGES = [
-  "https://picsum.photos/seed/shatter-1/1200/1200",
-  "https://picsum.photos/seed/shatter-2/1200/1200",
-  "https://picsum.photos/seed/shatter-3/1200/1200",
-  "https://picsum.photos/seed/shatter-4/1200/1200",
-  "https://picsum.photos/seed/shatter-5/1200/1200",
-];
+// The images shown in the center while loading (IMAGES, from lib/assets)
+// cycle every IMAGE_INTERVAL ms, wrapping back to the first after the last.
 const IMAGE_INTERVAL = 200;
 
 // Black boxes on the image. Positions snap to a grid of GRID_STEPS cells per
@@ -169,6 +169,7 @@ export default function ShatterLoader({
   const [imageIndex, setImageIndex] = useState(0);
   const [imageBoxes, setImageBoxes] = useState<BoxPos[]>(INITIAL_BOXES);
   const { makeReady } = AppStore();
+  const pathname = usePathname();
 
   // Keep the latest callbacks in refs so parent re-renders don't matter
   const onCompleteRef = useRef(onComplete);
@@ -178,18 +179,27 @@ export default function ShatterLoader({
     makeReadyRef.current = makeReady;
   }, [onComplete, makeReady]);
 
-  // 1. SIMULATED LOADING (single interval)
+  // 1. LOAD THE ASSETS (lib/assets). The number climbs in small steps toward
+  // the real progress, so it never jumps and never runs ahead of the loading.
   useEffect(() => {
+    let loaded = 0; // 0…1, share of assets finished
     let value = 0;
 
+    const cancel = preloadAssets(getAssets(pathname), (fraction) => {
+      loaded = fraction;
+    });
+
     const interval = setInterval(() => {
-      value = Math.min(100, value + Math.random() * 8);
+      value = Math.min(loaded * 100, value + Math.random() * 8);
       setProgress(Math.floor(value));
       if (value >= 100) clearInterval(interval);
     }, 120);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      cancel();
+      clearInterval(interval);
+    };
+  }, [pathname]);
 
   // 2. IMAGE SLIDESHOW + NEW BOX POSITIONS
   useEffect(() => {
@@ -246,7 +256,7 @@ export default function ShatterLoader({
                 alt=""
                 fill
                 priority={i === 0}
-                sizes="(max-width: 525px) 80vw, 420px"
+                sizes={LOADER_IMAGE_SIZES}
                 className={`object-cover ${
                   i === imageIndex ? "visible" : "invisible"
                 }`}

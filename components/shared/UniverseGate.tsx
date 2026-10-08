@@ -14,20 +14,11 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { GATE_IMAGES, GATE_IMAGE_SIZES } from "@/lib/assets";
 
 /* ------------------------------------------------------------------ */
 /* CONFIG                                                              */
 /* ------------------------------------------------------------------ */
-
-// Replace with your universe images.
-const DEFAULT_IMAGES = [
-  "https://picsum.photos/seed/universe-1/600/800",
-  "https://picsum.photos/seed/universe-2/600/800",
-  "https://picsum.photos/seed/universe-3/600/800",
-  "https://picsum.photos/seed/universe-4/600/800",
-  "https://picsum.photos/seed/universe-5/600/800",
-  "https://picsum.photos/seed/universe-6/600/800",
-];
 
 const BRAND = "Night O'Clock";
 const BRAND_SUFFIX = "Studios";
@@ -97,7 +88,7 @@ const scrollToTop = () =>
  */
 export default function UniverseGate({
   children,
-  images = DEFAULT_IMAGES,
+  images = GATE_IMAGES,
   label = "Enter",
   onEnter,
 }: {
@@ -853,7 +844,7 @@ function PopImage({
         src={src}
         alt=""
         fill
-        sizes={`${Math.round(card.w)}px`}
+        sizes={GATE_IMAGE_SIZES}
         className="object-cover"
       />
     </motion.div>

@@ -3,9 +3,10 @@
 import { motion } from 'framer-motion';
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
 import { flicker } from '@/components/shared/SectionIntro'; // adjust path
+import { UNIVERSES_BANNER } from '@/lib/assets';
 
-/* Placeholder art: swap in your universes banner */
-const banner = 'https://picsum.photos/seed/huxley-universes-1/1920/1080';
+/* Set in lib/assets, so the loader fetches it up front */
+const banner = UNIVERSES_BANNER;
 
 /* Placeholder facts: swap in your real numbers */
 const meta: { label: string; value: string; href?: string }[] = [

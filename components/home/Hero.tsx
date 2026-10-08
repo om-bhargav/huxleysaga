@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { FiChevronsDown } from 'react-icons/fi';
 import { StretchText } from '../shared/StrechText';
 import { SITE_NAME } from '@/config';
+import { HOME_HERO_IMAGE } from '@/lib/assets';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -24,7 +25,7 @@ const revealOrder = [3, 10, 1, 7, 13, 4, 11, 2, 9, 5, 12, 8, 6];
  * and the content after it slides up over it.
  */
 export default function Hero({
-  image = 'https://picsum.photos/seed/huxley/1920/1080', // placeholder, swap for your own image later
+  image = HOME_HERO_IMAGE,
   video,
   tagline = 'A post-apocalyptic sci-fi universe',
 }: HeroProps) {

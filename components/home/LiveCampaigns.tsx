@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode, type UIEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // adjust path
 import { RollingNumber } from '@/components/shared/RollingNumber'; // adjust path
@@ -143,8 +143,49 @@ function CampaignCard({ campaign }: { campaign: Campaign }) {
 }
 
 /**
+ * Phones: one card at a time, swiped by hand and snapping into place.
+ * There is no hover on a touch screen, so a drifting row can't be stopped there.
+ */
+function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
+  const [active, setActive] = useState(0);
+
+  const onScroll = (e: UIEvent<HTMLDivElement>) => {
+    const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
+    const max = scrollWidth - clientWidth;
+    if (max > 0) setActive(Math.round((scrollLeft / max) * (campaigns.length - 1)));
+  };
+
+  return (
+    <div className="md:hidden">
+      {/* -mx-3 + px-3: the row bleeds to the screen edges but the first card still lines up with the page */}
+      <div
+        onScroll={onScroll}
+        className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {campaigns.map((campaign) => (
+          <div key={campaign.title} className="flex shrink-0 snap-center">
+            <CampaignCard campaign={campaign} />
+          </div>
+        ))}
+      </div>
+
+      {/* Position: one bar per campaign, the current one lit */}
+      <div aria-hidden="true" className="mt-4 flex gap-1.5">
+        {campaigns.map((campaign, i) => (
+          <span
+            key={campaign.title}
+            className={`h-0.5 w-6 transition-colors duration-300 ${i === active ? 'bg-white' : 'bg-white/15'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Live campaigns. The heading flickers in word by word like the saga intro,
  * then the cards scroll past on a loop that stops under the cursor.
+ * On phones the loop is replaced by a swipeable row.
  */
 export default function LiveCampaigns({
   title = 'Live Campaigns',
@@ -171,7 +212,8 @@ export default function LiveCampaigns({
         className="mt-10 flex items-center gap-2 text-[10px] tracking-widest text-white/40 sm:text-[11px]"
       >
         <span aria-hidden="true" className="size-1 bg-white/40" />
-        {reduceMotion ? 'Scroll the row to browse' : 'Hover to pause'}
+        <span className="md:hidden">Swipe to browse</span>
+        <span className="max-md:hidden">{reduceMotion ? 'Scroll the row to browse' : 'Hover to pause'}</span>
       </motion.p>
 
       <motion.div
@@ -181,7 +223,9 @@ export default function LiveCampaigns({
         viewport={{ once: true, amount: 0.2 }}
         className="mt-3"
       >
-        <Marquee className="-mx-3">
+        <CampaignSwiper campaigns={campaigns} />
+
+        <Marquee className="-mx-3 max-md:hidden">
           {campaigns.map((campaign) => (
             <CampaignCard key={campaign.title} campaign={campaign} />
           ))}

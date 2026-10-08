@@ -3,10 +3,11 @@
 import { motion } from 'framer-motion';
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
 import { flicker } from '@/components/shared/SectionIntro'; // adjust path
+import { CONTACT_BANNER } from '@/lib/assets';
 import { CONTACT_EMAIL } from '@/components/contact/ContactIntro'; // adjust path
 
-/* Placeholder art: swap in your contact banner */
-const banner = 'https://picsum.photos/seed/huxley-contact-1/1920/1080';
+/* Set in lib/assets, so the loader fetches it up front */
+const banner = CONTACT_BANNER;
 
 /* Placeholder copy: swap in your real text */
 const meta: { label: string; value: string; href?: string }[] = [
