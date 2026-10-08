@@ -15,23 +15,30 @@ export type ShowcaseItem = {
 const picsum = (seed: string) => `https://picsum.photos/seed/${seed}/1920/1080`;
 
 /* Placeholder copy: swap in your real text */
+
 const defaultItems: ShowcaseItem[] = [
   {
-    title: 'The Oracle',
+    title: 'Spy Files',
     description:
-      'The first prequel in the Huxley universe follows Max through his early years in the Ronin army, where he stumbles onto a conspiracy that could bring down the empire and everything he believes.',
-    image: picsum('showcase-oracle'),
-    button: { label: 'View The Oracle', href: '/products/the-oracle' },
+      'Step into a world of covert operations, hidden identities, and high-stakes missions. Follow elite agents as they uncover secrets buried deep within a global web of deception.',
+    image: picsum('universe-spy-files'),
+    button: { label: 'Explore Spy Files', href: '/universes/spy-files' },
   },
   {
-    title: 'Huxley',
+    title: 'Gaming',
     description:
-      'The original graphic novel, set on a ruined world run by AI. Scavengers Max and Kai dig up an ancient atomic robot and are dragged into a desperate fight to survive.',
-    image: picsum('showcase-huxley'),
-    button: { label: 'View Huxley', href: '/products/huxley' },
+      'Enter worlds where every decision matters. From legendary heroes to dangerous quests, discover immersive stories and unforgettable adventures built for gamers.',
+    image: picsum('universe-gaming'),
+    button: { label: 'Explore Gaming', href: '/universes/gaming' },
+  },
+  {
+    title: 'Wild West',
+    description:
+      'Ride into a lawless frontier of outlaws, gunslingers, and dusty towns. In the Wild West, every trail has a story and every showdown could change your fate.',
+    image: picsum('universe-wild-west'),
+    button: { label: 'Explore Wild West', href: '/universes/wild-west' },
   },
 ];
-
 /* Blinks on like a bad signal */
 const flicker: Variants = {
   hidden: { opacity: 0 },
