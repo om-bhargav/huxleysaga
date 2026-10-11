@@ -17,7 +17,7 @@ const facts: { label: string; value: string }[] = [
 export default function AboutHistory() {
   return (
     <GlitchScope>
-      <section className="px-3 font-heading uppercase">
+      <section className="px-3 uppercase">
         <SectionIntro
           title="History"
           /* Placeholder copy: swap in your real text */

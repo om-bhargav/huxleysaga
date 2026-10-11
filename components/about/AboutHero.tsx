@@ -17,7 +17,7 @@ const meta: { label: string; value: string; href?: string }[] = [
 /** Opening plate for the about page: banner, title, the key facts, and a jump to the history. */
 export default function AboutHero() {
   return (
-    <section className="bg-black font-heading uppercase">
+    <section className="uppercase">
       {/*
         Fills the screen on every device. min-h (not h) so on a short phone in landscape
         the frame grows to fit the text instead of clipping the title.

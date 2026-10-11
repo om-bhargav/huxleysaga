@@ -54,7 +54,7 @@ const events: Event[] = [
 /** Appearances, dated the way the live page dates them. */
 export default function AboutEvents() {
   return (
-    <section className="px-3 font-heading uppercase">
+    <section className="px-3 uppercase">
       <SectionIntro title="Events" aside={`[${String(events.length).padStart(2, '0')}]`} />
 
       <motion.ul
@@ -80,7 +80,7 @@ export default function AboutEvents() {
                 rel="noreferrer"
                 className="grid gap-x-3 gap-y-3 py-5 text-white transition-colors hover:bg-white/3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-white md:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1.6fr)] md:items-baseline md:px-1"
               >
-                <p className="text-[11px] tracking-widest text-white/40 sm:text-[13px]">
+                <p className="text-[11px] font-heading tracking-widest text-white/40 sm:text-[13px]">
                   <HoverHighlight className="-ml-1">{event.date}</HoverHighlight>
                 </p>
 

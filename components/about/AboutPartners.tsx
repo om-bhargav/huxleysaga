@@ -17,7 +17,7 @@ const partners: { name: string; href: string }[] = [
 /** The partner row, running past on a loop the way the live page repeats it. */
 export default function AboutPartners() {
   return (
-    <section className="overflow-hidden px-3 font-heading uppercase">
+    <section className="overflow-hidden px-3 uppercase">
       <SectionIntro title="Partners" aside={`[${String(partners.length).padStart(2, '0')}]`} />
 
       <motion.div
@@ -34,7 +34,7 @@ export default function AboutPartners() {
               href={partner.href}
               target="_blank"
               rel="noreferrer"
-              className="flex h-28 w-[min(70vw,320px)] shrink-0 items-center justify-center border border-white/10 bg-neutral-950 px-6 text-center text-[clamp(1rem,1.6vw,1.5rem)] tracking-wide text-white/70 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white"
+              className="flex font-heading h-28 w-[min(70vw,320px)] shrink-0 items-center justify-center border border-white/10 bg-neutral-950 px-6 text-center text-[clamp(1rem,1.6vw,1.5rem)] tracking-wide text-white/70 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white"
             >
               {partner.name}
             </a>

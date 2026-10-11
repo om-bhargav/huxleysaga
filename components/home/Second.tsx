@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform, type Variants } from 'framer-motion';
 import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // adjust path
 import { BracketButton } from '@/components/shared/BracketButton'; // adjust path
+import { worlds } from '@/config/worlds'; // adjust path
 
 export type ShowcaseItem = {
   title: string;
@@ -16,29 +17,25 @@ const picsum = (seed: string) => `https://picsum.photos/seed/${seed}/1920/1080`;
 
 /* Placeholder copy: swap in your real text */
 
-const defaultItems: ShowcaseItem[] = [
-  {
-    title: 'Spy Files',
-    description:
-      'Step into a world of covert operations, hidden identities, and high-stakes missions. Follow elite agents as they uncover secrets buried deep within a global web of deception.',
-    image: picsum('universe-spy-files'),
-    button: { label: 'Explore Spy Files', href: '/universes/spy-files' },
-  },
-  {
-    title: 'Gaming',
-    description:
-      'Enter worlds where every decision matters. From legendary heroes to dangerous quests, discover immersive stories and unforgettable adventures built for gamers.',
-    image: picsum('universe-gaming'),
-    button: { label: 'Explore Gaming', href: '/universes/gaming' },
-  },
-  {
-    title: 'Wild West',
-    description:
-      'Ride into a lawless frontier of outlaws, gunslingers, and dusty towns. In the Wild West, every trail has a story and every showdown could change your fate.',
-    image: picsum('universe-wild-west'),
-    button: { label: 'Explore Wild West', href: '/universes/wild-west' },
-  },
-];
+
+/* Card copy per world; keys are the world slugs from config/worlds */
+const descriptions: Record<string, string> = {
+  'spy-files':
+    'Step into a world of covert operations, hidden identities, and high-stakes missions. Follow elite agents as they uncover secrets buried deep within a global web of deception.',
+  'wild-west':
+    'Ride into a lawless frontier of outlaws, gunslingers, and dusty towns. In the Wild West, every trail has a story and every showdown could change your fate.',
+  'game-world':
+    'Enter worlds where every decision matters. From legendary heroes to dangerous quests, discover immersive stories and unforgettable adventures built for gamers.',
+  'fantasy-land':
+    'Enter a realm of legendary heroes, ancient magic, and twisted tournaments. In Fantasy Land, every battle is a test, and fate is never in your own hands.',
+};
+
+const defaultItems: ShowcaseItem[] = worlds.map((world) => ({
+  title: world.label,
+  description: descriptions[world.slug] ?? world.line,
+  image: picsum(`universe-${world.slug}`),
+  button: { label: `Explore ${world.label}`, href: `/universes/${world.slug}` },
+}));
 /* Blinks on like a bad signal */
 const flicker: Variants = {
   hidden: { opacity: 0 },
@@ -63,7 +60,7 @@ function Panel({ item, index, total }: { item: ShowcaseItem; index: number; tota
 
   return (
     <GlitchScope>
-      <section ref={ref} className="relative h-svh min-h-[600px] overflow-hidden bg-black font-heading uppercase text-white">
+      <section ref={ref} className="relative h-svh min-h-[600px] overflow-hidden uppercase text-white">
         {/* Expanding image with glitch */}
         <motion.div style={{ clipPath }} className="absolute inset-0">
           <motion.div style={{ scale }} className="absolute inset-0">

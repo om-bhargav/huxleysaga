@@ -22,14 +22,12 @@ type SectionIntroProps = {
   text?: string;
   /** Small extra next to the title, e.g. a count */
   aside?: ReactNode;
+  /** Extra classes for the title only, e.g. a world's display font */
+  titleClassName?: string;
   className?: string;
 };
 
-/**
- * The saga-intro header: a rule, a title, and a big grey paragraph whose words
- * flicker in one by one when it is scrolled into view.
- */
-export function SectionIntro({ title, text, aside, className = '' }: SectionIntroProps) {
+export function SectionIntro({ title, text, aside, titleClassName = '', className = '' }: SectionIntroProps) {
   const words = text?.split(' ') ?? [];
 
   return (
@@ -42,13 +40,13 @@ export function SectionIntro({ title, text, aside, className = '' }: SectionIntr
         viewport={{ once: true, amount: 0.4 }}
         className="mt-4 max-w-[70%] text-[clamp(1.125rem,1.6vw,1.75rem)] leading-[1.1] tracking-wide max-lg:max-w-none"
       >
-        <motion.h2 variants={flicker} custom={0} className="flex items-center gap-3 text-white">
+        <motion.h2 variants={flicker} custom={0} className={`flex items-center gap-3 text-white ${titleClassName}`}>
           {title}
           {aside && <span className="text-white/40">{aside}</span>}
         </motion.h2>
 
         {text && (
-          <p className="text-white/40">
+          <p className="text-white/40 font-body">
             <span className="sr-only">{text}</span>
             <span aria-hidden="true">
               {words.map((word, i) => (

@@ -18,13 +18,7 @@ const meta: { label: string; value: string; href?: string }[] = [
 /** Opening plate for the contact page: banner, title, the address, and a jump to the form. */
 export default function ContactHero() {
   return (
-    <section className="font-heading uppercase">
-      {/*
-        Fills the screen on every device. min-h (not h) so on a short phone in landscape
-        the frame grows to fit the text instead of clipping the title.
-        The text sits in normal flow at the bottom; RevealImage clips itself, so no overflow-hidden here.
-        svh = the visible height with mobile browser bars showing, so nothing hides behind them.
-      */}
+    <section className="uppercase">
       <div className="relative flex md:min-h-svh max-md:h-[80vh] w-full flex-col justify-end border border-white/10">
         {/* Above the fold, so it plays on load instead of waiting to be scrolled into view */}
         <div className="absolute inset-0">

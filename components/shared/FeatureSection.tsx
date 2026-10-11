@@ -72,7 +72,7 @@ export default function FeatureSection({ image, title, description, button, id }
           <Tick />
 
           <h2 className="mt-6 overflow-hidden text-[clamp(3rem,6.5vw,7rem)] uppercase leading-none">
-            <motion.span variants={rise} className="block">
+            <motion.span variants={rise} className="block font-heading">
               {title}
             </motion.span>
           </h2>
@@ -81,7 +81,7 @@ export default function FeatureSection({ image, title, description, button, id }
 
           <motion.p
             variants={fadeUp}
-            className="mt-4 font-heading text-[11px] uppercase leading-relaxed tracking-wider sm:text-[13px]"
+            className="mt-4 text-[11px] uppercase leading-relaxed tracking-wider sm:text-[13px]"
           >
             {description}
           </motion.p>

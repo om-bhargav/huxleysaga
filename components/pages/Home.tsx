@@ -1,7 +1,6 @@
 import Eight from "../home/Eight";
 import Eleven from "../home/Eleven";
 import Fifth from "../home/Fifth";
-import Forth from "../home/Forth";
 import Hero from "../home/Hero";
 import LiveCampaigns from "../home/LiveCampaigns";
 import Ninth from "../home/Ninth";
@@ -21,7 +20,6 @@ export default function Home() {
         <SagaIntro/>
         <Second />
         <Third />{/* ✅ */}
-        <Forth />
         <Fifth />{/* ✅ */}
         <Sixth />{/* ✅ */}
         <Seventh />{/* ✅ */}

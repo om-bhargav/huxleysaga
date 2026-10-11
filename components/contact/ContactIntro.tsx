@@ -160,14 +160,14 @@ export default function ContactIntro() {
   const remaining = MESSAGE_MAX - fields.message.length;
 
   return (
-    <section className="px-3 font-heading uppercase">
+    <section className="px-3 uppercase">
       <SectionIntro
         title="Contact"
         /* Placeholder copy: swap in your real text */
         text="One inbox for everything: press, licensing, wholesale and orders. Pick a topic, write to us, and it reaches the right person faster."
       />
 
-      <div className="mt-12 grid gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+<div className="mt-12 grid gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         {/* ───────────── Left: the address and everything around it ───────────── */}
         <div className="grid content-start gap-3">
           {/* Email */}
@@ -233,7 +233,7 @@ export default function ContactIntro() {
                         <span className={`text-[10px] tabular-nums ${active ? 'text-white' : 'text-white/30'}`}>
                           {String(i + 1).padStart(2, '0')}
                         </span>
-                        <span className={`text-lg leading-none transition-opacity ${active ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'}`}>
+                        <span className={`font-heading text-lg leading-none transition-opacity ${active ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'}`}>
                           {topic.id}
                         </span>
                       </span>
@@ -310,7 +310,7 @@ export default function ContactIntro() {
                 >
                   <div>
                     <p className={label}>Message received</p>
-                    <p className="mt-4 text-[clamp(1.5rem,3vw,2.75rem)] leading-none">
+                    <p className="mt-4 font-heading text-[clamp(1.5rem,3vw,2.75rem)] leading-none">
                       Thanks{lastSent?.name ? `, ${lastSent.name.trim().split(' ')[0]}` : ''}.
                     </p>
                     <p className="mt-4 max-w-md text-sm leading-relaxed text-white/60">

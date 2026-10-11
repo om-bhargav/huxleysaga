@@ -42,7 +42,7 @@ const row: Variants = {
 
 export default function EventsSection() {
   return (
-    <section className="grid gap-10 px-3 py-20 font-heading uppercase text-white lg:grid-cols-[25%_1fr] lg:gap-0">
+    <section className="grid gap-10 px-3 py-20 uppercase text-white lg:grid-cols-[25%_1fr] lg:gap-0">
       <motion.h2
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -75,7 +75,7 @@ export default function EventsSection() {
                   className="absolute -left-6 top-1/2 hidden size-1 bg-white/60 transition-transform duration-300 group-hover:scale-150 lg:block"
                 />
 
-                <span className="self-end text-[clamp(2.75rem,5.5vw,6rem)] font-light leading-[0.85]">
+                <span className="self-end font-heading text-[clamp(2.75rem,5.5vw,6rem)] font-light leading-[0.85]">
                   <HoverHighlight>{event.date}</HoverHighlight>
                 </span>
 

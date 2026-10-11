@@ -3,15 +3,21 @@
 import {
   AnimatePresence,
   motion,
+  useMotionValue,
   useReducedMotion,
+  useSpring,
+  useTransform,
   type Transition,
+  type Variants,
 } from "framer-motion";
 import Image from "next/image";
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { GATE_IMAGES, GATE_IMAGE_SIZES } from "@/lib/assets";
@@ -27,8 +33,21 @@ const MAX_BOX = 240; // box width on large screens (px)
 const BOX_VW = 0.42; // box width on small screens (fraction of viewport width)
 const ZOOM_DURATION = 1.1; // seconds
 const FLAP_OPEN_TIME = 450; // ms to wait for the flaps if they were closed on click
+const MAX_CARDS = 9; // more than this and the fan gets too crowded to read
+const TOUCH_PREVIEW_DELAY = 900; // ms before touch screens get the preview on their own
 
-const zoomEase: [number, number, number, number] = [0.7, 0, 0.2, 1];
+type Bezier = [number, number, number, number];
+const zoomEase: Bezier = [0.7, 0, 0.2, 1];
+const easeOutSoft: Bezier = [0.22, 1, 0.36, 1];
+const RISE: Bezier = [0.5, 0, 0.9, 0.4]; // speeding up out of the box
+const SETTLE: Bezier = [0.16, 1, 0.3, 1]; // gliding into place
+const SINK: Bezier = [0.5, 0, 0.75, 0]; // dropping back in
+
+const DEG = Math.PI / 180;
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/* Fine film grain, drawn once as an SVG noise tile */
+const GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>")`;
 
 /* ------------------------------------------------------------------ */
 /* THEME — built from shadcn CSS variables                             */
@@ -66,9 +85,84 @@ const theme = {
  */
 type Stage = "idle" | "opening" | "zooming" | "open";
 
+/** Where the cards are: inside the box, fanned out above it, or flying past the camera */
+type CardState = "rest" | "out" | "gone";
+
 // Instant jump (ignores any `scroll-behavior: smooth` on the page).
 const scrollToTop = () =>
   window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+
+/* ------------------------------------------------------------------ */
+/* FAN LAYOUT                                                          */
+/* ------------------------------------------------------------------ */
+
+type Slot = {
+  /** Resting spot in the fan, relative to the box's centre */
+  x: number;
+  y: number;
+  rotate: number;
+  /** translateZ: the middle of the fan sits closest to the viewer */
+  depth: number;
+  /** Reveal order: middle card first, then outwards */
+  order: number;
+  /** Where it flies to when the box zooms in */
+  gx: number;
+  gy: number;
+};
+
+/**
+ * The cards fan out above the box like a hand of cards held from inside it:
+ * every card is rotated around a pivot below the opening. The radius shrinks
+ * on small screens so the whole fan always fits.
+ */
+function fanLayout(count: number, box: number, viewport: { w: number; h: number }) {
+  const card = { w: box * 0.4, h: box * 0.54 };
+  const pivotY = box * 0.3;
+  const minRadius = box * 0.85;
+  const maxRadius = box * 1.3;
+
+  // Largest radius that keeps the top card on screen
+  const fitTop = viewport.h / 2 - 24 - card.h / 2 + pivotY;
+
+  // Largest radius that keeps the outermost (rotated) cards on screen
+  const fitSide = (spread: number) => {
+    const half = (spread / 2) * DEG;
+    if (half <= 0) return Infinity;
+    const cardReach = (card.w / 2) * Math.cos(half) + (card.h / 2) * Math.sin(half);
+    return (viewport.w / 2 - 12 - cardReach) / Math.sin(half);
+  };
+
+  // Start with a generous spread and close the fan until it fits the width
+  let step = count > 1 ? Math.min(14, 84 / (count - 1)) : 0; // degrees between cards
+  while (count > 1 && step > 4 && fitSide(step * (count - 1)) < minRadius) step *= 0.9;
+  const spread = step * (count - 1);
+  const radius = Math.max(minRadius, Math.min(maxRadius, fitTop, fitSide(spread)));
+
+  const ranked = Array.from({ length: count }, (_, i) => i).sort((a, b) => {
+    const da = Math.abs(a - (count - 1) / 2);
+    const db = Math.abs(b - (count - 1) / 2);
+    return da - db || a - b;
+  });
+
+  const slots: Slot[] = Array.from({ length: count }, (_, i) => {
+    const angle = -spread / 2 + step * i;
+    const a = angle * DEG;
+    const t = count > 1 ? (i / (count - 1)) * 2 - 1 : 0; // -1 … 1 across the fan
+    const x = Math.sin(a) * radius;
+    const y = pivotY - Math.cos(a) * radius;
+    return {
+      x,
+      y,
+      rotate: angle,
+      depth: (1 - Math.abs(t)) * 60,
+      order: ranked.indexOf(i),
+      gx: x + Math.sin(a) * viewport.w * 0.7,
+      gy: y - Math.cos(a) * viewport.h * 0.7,
+    };
+  });
+
+  return { card, slots, riseY: -box * 0.55, insideY: box * 0.02 };
+}
 
 /* ------------------------------------------------------------------ */
 /* COMPONENT                                                           */
@@ -77,10 +171,13 @@ const scrollToTop = () =>
 /**
  * Wrap your page with this. A Night O'Clock Studios film box sits in the
  * middle of the screen.
- * - Hover (or keyboard focus): the clapper-striped lid opens and the images
- *   climb out of the box and orbit to spots all around it.
- * - Click: the page is rendered for the first time, then the box zooms in
- *   until it fills the screen and the page is revealed through it.
+ * - Hover (or keyboard focus; on touch screens it happens by itself): the
+ *   clapper-striped lid opens and the images rise out of the box and fan out
+ *   above it like a hand of film frames. The fan tilts with the pointer, and
+ *   hovering one frame lifts it while the others dim.
+ * - Click (the box or any frame): the page is rendered for the first time,
+ *   then the box zooms in until it fills the screen and the page is revealed
+ *   through it, while the frames fly past the camera.
  *
  *   <UniverseGate images={[...]}>
  *     <YourPage />
@@ -99,7 +196,9 @@ export default function UniverseGate({
 }) {
   const reduceMotion = useReducedMotion();
   const [stage, setStage] = useState<Stage>("idle");
-  const [hovered, setHovered] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [touch, setTouch] = useState(false);
+  const [focusCard, setFocusCard] = useState<number | null>(null);
   const [box, setBox] = useState(MAX_BOX);
   const [viewport, setViewport] = useState({ w: 1280, h: 800 });
   const [zoomScale, setZoomScale] = useState(1);
@@ -111,7 +210,7 @@ export default function UniverseGate({
     onEnterRef.current = onEnter;
   }, [onEnter]);
 
-  // Box size and image ring follow the viewport
+  // Box size and fan follow the viewport
   useEffect(() => {
     const update = () => {
       setViewport({ w: window.innerWidth, h: window.innerHeight });
@@ -128,6 +227,14 @@ export default function UniverseGate({
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
+  }, []);
+
+  // Touch screens can't hover, so they get the preview on their own
+  useEffect(() => {
+    if (!window.matchMedia("(hover: none)").matches) return;
+    setTouch(true);
+    const t = window.setTimeout(() => setPreview(true), TOUCH_PREVIEW_DELAY);
+    return () => window.clearTimeout(t);
   }, []);
 
   // While the page is mounted but still behind the gate, keep it inert
@@ -179,6 +286,24 @@ export default function UniverseGate({
     scrollToTop();
   }, []);
 
+  // The fan leans gently towards the pointer
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  const springX = useSpring(pointerX, { stiffness: 90, damping: 18, mass: 0.6 });
+  const springY = useSpring(pointerY, { stiffness: 90, damping: 18, mass: 0.6 });
+  const fanRotateY = useTransform(springX, [-1, 1], [-12, 12]);
+  const fanRotateX = useTransform(springY, [-1, 1], [9, -9]);
+
+  useEffect(() => {
+    if (reduceMotion || stage === "open") return;
+    const move = (e: PointerEvent) => {
+      pointerX.set((e.clientX / window.innerWidth) * 2 - 1);
+      pointerY.set((e.clientY / window.innerHeight) * 2 - 1);
+    };
+    window.addEventListener("pointermove", move);
+    return () => window.removeEventListener("pointermove", move);
+  }, [reduceMotion, stage, pointerX, pointerY]);
+
   // OPENING → ZOOMING: let the freshly mounted page render for a couple of
   // frames (so it doesn't stutter the zoom) and let the flaps finish opening.
   useEffect(() => {
@@ -215,7 +340,7 @@ export default function UniverseGate({
       return;
     }
 
-    flapsWereOpen.current = hovered;
+    flapsWereOpen.current = preview;
     setZoomScale(
       (Math.max(window.innerWidth, window.innerHeight) / holeSize) * 1.15,
     );
@@ -230,20 +355,35 @@ export default function UniverseGate({
 
   const mounted = stage !== "idle";
   const zooming = stage === "zooming";
-  const flapsOpen = hovered || stage !== "idle";
+  const flapsOpen = preview || stage !== "idle";
 
-  // Ring of images around the box, kept inside the viewport
-  const card = { w: box * 0.36, h: box * 0.48 };
-  const ring = {
-    cx: 0,
-    cy: -box * 0.05, // the box's visual center sits a little above its middle
-    rx: Math.min(box * 1.18, viewport.w / 2 - card.w / 2 - 12),
-    ry: Math.min(box * 1.0, viewport.h / 2 - card.h / 2 - 48),
-  };
+  const cards = images.slice(0, MAX_CARDS);
+  const fan = useMemo(() => fanLayout(cards.length, box, viewport), [cards.length, box, viewport]);
+  const cardState: CardState = zooming ? "gone" : flapsOpen ? "out" : "rest";
+
+  // How far the open fan reaches above and to the sides of the box's centre
+  const reach = useMemo(() => {
+    if (!fan.slots.length) return { top: 0, side: 0 };
+    return {
+      top: Math.min(...fan.slots.map((s) => s.y)) - fan.card.h * 0.75,
+      side: Math.max(...fan.slots.map((s) => Math.abs(s.x))) + fan.card.w * 0.85,
+    };
+  }, [fan]);
+  const activeCard = cardState === "out" ? focusCard : null;
 
   const zoomTransition: Transition = {
     duration: ZOOM_DURATION,
     ease: zoomEase,
+  };
+
+  // Pen and mouse hover; touch is handled by the automatic preview
+  const hoverStart = (e: ReactPointerEvent) => {
+    if (e.pointerType !== "touch") setPreview(true);
+  };
+  const hoverEnd = (e: ReactPointerEvent) => {
+    if (e.pointerType === "touch") return;
+    setPreview(false);
+    setFocusCard(null);
   };
 
   return (
@@ -276,36 +416,41 @@ export default function UniverseGate({
               onAnimationComplete={finishZoom}
             />
 
-            {/* CINEMATIC ATMOSPHERE — overhead spotlight + vignette */}
+            {/* CINEMATIC ATMOSPHERE — overhead spotlight + vignette. The
+                spotlight brightens while the fan is out. */}
             <motion.div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0"
               animate={{ opacity: zooming ? 0 : 1 }}
               transition={{ duration: 0.25 }}
             >
-              <div
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              <motion.div
+                className="absolute left-1/2 top-1/2 rounded-full"
                 style={{
-                  width: box * 4.5,
-                  height: box * 4.5,
+                  width: box * 5,
+                  height: box * 5,
+                  marginLeft: -box * 2.5,
+                  marginTop: -box * 2.9,
                   background:
-                    "radial-gradient(circle, color-mix(in oklch, var(--foreground) 8%, transparent) 0%, color-mix(in oklch, var(--foreground) 2%, transparent) 38%, transparent 65%)",
+                    "radial-gradient(circle, color-mix(in oklch, var(--foreground) 9%, transparent) 0%, color-mix(in oklch, var(--foreground) 2%, transparent) 38%, transparent 65%)",
                 }}
+                animate={{ opacity: flapsOpen ? 1 : 0.6, scale: flapsOpen ? 1.08 : 1 }}
+                transition={{ duration: 0.8, ease: easeOutSoft }}
               />
               <div
                 className="absolute inset-0"
                 style={{
                   background:
-                    "radial-gradient(ellipse at center, transparent 45%, color-mix(in oklch, black 18%, transparent) 100%)",
+                    "radial-gradient(ellipse at center, transparent 40%, color-mix(in oklch, black 30%, transparent) 100%)",
                 }}
               />
             </motion.div>
 
-            {/* BRAND CAPTION */}
+            {/* BRAND CAPTION — below the box, clear of the fan */}
             <motion.div
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 flex flex-col items-center gap-2 px-4 text-center"
-              style={{ top: `calc(50% + ${ring.cy + ring.ry + card.h / 2 + 18}px)` }}
+              style={{ top: `calc(50% + ${box * 0.62}px)` }}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: zooming ? 0 : 1, y: 0 }}
               transition={{ duration: 0.6, delay: zooming ? 0 : 0.3 }}
@@ -314,62 +459,123 @@ export default function UniverseGate({
                 {BRAND} {BRAND_SUFFIX}
               </span>
               <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.3em]">
-                Hover to preview · Click to {label.toLowerCase()}
+                {touch
+                  ? `Tap the box to ${label.toLowerCase()}`
+                  : `Hover to preview · Click to ${label.toLowerCase()}`}
               </span>
             </motion.div>
 
-            {/* FILM BOX — back half, images, front half. The images sit
-                between the halves, so they start INSIDE the box (hidden by
-                its front walls) and climb out of the opening. */}
-            <motion.button
-              type="button"
-              aria-label={`${label} ${BRAND} ${BRAND_SUFFIX}`}
-              onClick={enter}
-              onMouseEnter={() => setHovered(true)}
-              onMouseLeave={() => setHovered(false)}
-              onFocus={() => setHovered(true)}
-              onBlur={() => setHovered(false)}
-              disabled={stage !== "idle"}
-              className="relative z-20 cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-8 focus-visible:ring-offset-background"
+            {/* HOVER ZONE — a still element, so the box lifting on hover can't
+                pull itself out from under the pointer. The cards are inside it,
+                so pointing at them keeps the preview open. */}
+            <div
+              className="relative z-20"
               style={{ width: box, height: box * 0.7 }}
-              initial={{ opacity: 0, y: 30 }}
-              animate={
-                zooming
-                  ? { opacity: 0, y: 0, scale: zoomScale * 0.5 }
-                  : { opacity: 1, y: hovered ? -6 : 0, scale: 1 }
-              }
-              transition={
-                zooming
-                  ? {
-                      scale: zoomTransition,
-                      opacity: { duration: 0.6, ease: "easeIn" },
-                    }
-                  : { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
-              }
+              onPointerEnter={hoverStart}
+              onPointerLeave={hoverEnd}
             >
-              <FilmBox part="back" width={box} open={flapsOpen} label={label} />
-
+              {/* While the fan is open, an arch over it keeps the preview open in
+                  the gap between the box and the cards. Hit-testing follows the
+                  rounded corners, so the empty corners of the screen don't count. */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 top-1/2"
-              >
-                {images.map((src, i) => (
-                  <PopImage
-                    key={src}
-                    src={src}
-                    index={i}
-                    count={images.length}
-                    box={box}
-                    card={card}
-                    ring={ring}
-                    out={flapsOpen}
-                    flyAway={zooming}
-                  />
-                ))}
-              </div>
+                className="absolute"
+                style={{
+                  left: box / 2 - reach.side,
+                  width: reach.side * 2,
+                  top: box * 0.35 + reach.top,
+                  height: box * 0.35 - reach.top,
+                  borderRadius: "50% 50% 0 0 / 70% 70% 0 0",
+                  pointerEvents: flapsOpen ? "auto" : "none",
+                }}
+              />
 
-              <FilmBox part="front" width={box} open={flapsOpen} label={label} />
-            </motion.button>
+              {/* Contact shadow: grounds the box, shrinks as it lifts */}
+              <motion.div
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 rounded-[50%]"
+                style={{
+                  width: box * 1.15,
+                  height: box * 0.2,
+                  marginLeft: -box * 0.575,
+                  bottom: -box * 0.16,
+                  background:
+                    "radial-gradient(closest-side, color-mix(in oklch, black 60%, transparent), transparent)",
+                  filter: "blur(8px)",
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: zooming ? 0 : flapsOpen ? 0.55 : 0.85, scale: flapsOpen ? 0.88 : 1 }}
+                transition={{ duration: 0.6, ease: easeOutSoft }}
+              />
+
+              {/* FILM BOX — back half, cards, front half. The cards sit
+                  between the halves, so they start INSIDE the box (hidden by
+                  its front walls) and rise out of the opening. */}
+              <motion.button
+                type="button"
+                aria-label={`${label} ${BRAND} ${BRAND_SUFFIX}`}
+                onClick={enter}
+                onFocus={() => setPreview(true)}
+                onBlur={() => {
+                  if (!touch) setPreview(false);
+                }}
+                disabled={stage !== "idle"}
+                className="relative cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-8 focus-visible:ring-offset-background"
+                style={{ width: box, height: box * 0.7 }}
+                initial={{ opacity: 0, y: 30 }}
+                animate={
+                  zooming
+                    ? { opacity: 0, y: 0, scale: zoomScale * 0.5 }
+                    : { opacity: 1, y: flapsOpen ? -4 : 0, scale: 1 }
+                }
+                transition={
+                  zooming
+                    ? {
+                        scale: zoomTransition,
+                        opacity: { duration: 0.6, ease: "easeIn" },
+                      }
+                    : { duration: 0.6, ease: easeOutSoft }
+                }
+              >
+                <FilmBox part="back" width={box} open={flapsOpen} label={label} />
+
+                {/* The fan: a 3D layer that leans towards the pointer */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-1/2 top-1/2"
+                  style={{ perspective: box * 4.5 }}
+                >
+                  <motion.div
+                    className="absolute left-0 top-0"
+                    style={{
+                      transformStyle: "preserve-3d",
+                      rotateX: reduceMotion ? 0 : fanRotateX,
+                      rotateY: reduceMotion ? 0 : fanRotateY,
+                    }}
+                  >
+                    {cards.map((src, i) => (
+                      <FanCard
+                        key={`${i}-${src}`}
+                        src={src}
+                        index={i}
+                        count={cards.length}
+                        slot={fan.slots[i]}
+                        card={fan.card}
+                        riseY={fan.riseY}
+                        insideY={fan.insideY}
+                        state={cardState}
+                        focused={activeCard === i}
+                        dimmed={activeCard !== null && activeCard !== i}
+                        float={!reduceMotion}
+                        onFocusCard={setFocusCard}
+                      />
+                    ))}
+                  </motion.div>
+                </div>
+
+                <FilmBox part="front" width={box} open={flapsOpen} label={label} />
+              </motion.button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -475,8 +681,8 @@ function Wall({
         transition={
           flapOpen
             ? { type: "spring", stiffness: 170, damping: 15, delay: flapDelay }
-            : // wait for the images to drop back in before closing
-              { duration: 0.35, ease: [0.4, 0, 0.2, 1], delay: 0.55 + flapDelay }
+            : // wait for the cards to drop back in before closing
+              { duration: 0.35, ease: [0.4, 0, 0.2, 1], delay: 0.65 + flapDelay }
         }
       >
         <Sided outside={flapOutside} inside={theme.insideFlap} />
@@ -530,7 +736,8 @@ function FilmBox({
   const h = w * 0.7; // height
   const d = w * 0.7; // depth
   const px = (n: number) => Math.max(1, Math.round(w * n));
-  const f = (n: number) => `${Math.max(6, Math.round(w * n))}px`; // font size
+  // Font size, never below 8px so the small print on the box stays legible
+  const f = (n: number) => `${Math.max(8, Math.round(w * n))}px`;
   const stripe = px(0.045);
 
   return (
@@ -599,7 +806,7 @@ function FilmBox({
               <div
                 className="absolute inset-x-0 flex flex-col justify-between"
                 style={{
-                  top: h * 0.3,
+                  top: h * 0.26,
                   height: h * 0.4,
                   background: "var(--foreground)",
                   padding: `${px(0.012)}px 0`,
@@ -641,9 +848,9 @@ function FilmBox({
               <div
                 className="absolute inset-x-0 text-center font-semibold uppercase text-muted-foreground"
                 style={{
-                  bottom: h * 0.1,
-                  fontSize: f(0.028),
-                  letterSpacing: "0.3em",
+                  bottom: h * 0.08,
+                  fontSize: f(0.03),
+                  letterSpacing: "0.25em",
                 }}
               >
                 35mm · Reel 01
@@ -671,7 +878,7 @@ function FilmBox({
               {/* Branding */}
               <div
                 className="absolute inset-x-0 flex items-center justify-center text-foreground"
-                style={{ top: h * 0.27, gap: px(0.03) }}
+                style={{ top: h * 0.3, gap: px(0.03) }}
               >
                 <MoonClockMark size={px(0.13)} />
                 <div className="flex flex-col items-start leading-none">
@@ -685,8 +892,8 @@ function FilmBox({
                     className="font-medium uppercase text-muted-foreground"
                     style={{
                       fontSize: f(0.034),
-                      letterSpacing: "0.62em",
-                      marginTop: px(0.012),
+                      letterSpacing: "0.5em",
+                      marginTop: px(0.014),
                     }}
                   >
                     {BRAND_SUFFIX}
@@ -696,18 +903,18 @@ function FilmBox({
 
               {/* Slate info */}
               <div
-                className="absolute flex border-t border-border font-semibold uppercase text-muted-foreground"
+                className="absolute flex whitespace-nowrap border-t border-border font-semibold uppercase text-muted-foreground"
                 style={{
                   left: w * 0.07,
                   right: w * 0.07,
-                  bottom: h * 0.1,
+                  bottom: h * 0.09,
                   paddingTop: px(0.022),
-                  fontSize: f(0.028),
-                  letterSpacing: "0.18em",
+                  fontSize: f(0.03),
+                  letterSpacing: "0.14em",
                 }}
               >
                 <span className="flex-1">Scene 01</span>
-                <span className="flex-1 text-center">Take 01</span>
+                {w >= 200 && <span className="flex-1 text-center">Take 01</span>}
                 <span className="flex-1 text-right text-foreground">
                   ▶ {label}
                 </span>
@@ -721,132 +928,183 @@ function FilmBox({
 }
 
 /* ------------------------------------------------------------------ */
-/* ONE POP-OUT IMAGE                                                   */
+/* ONE FAN CARD                                                        */
 /* ------------------------------------------------------------------ */
 
-type Ring = { cx: number; cy: number; rx: number; ry: number };
+type CardCustom = { slot: Slot; riseY: number; insideY: number; count: number };
 
-const DEG = Math.PI / 180;
+/**
+ * rest — inside the box, invisible. With `initial={false}` the card simply
+ *        starts here, so nothing plays on first load.
+ * out  — straight up out of the opening, then glides into its place in the fan.
+ * gone — flies outwards past the camera, blurring, as the box zooms in.
+ */
+const cardVariants: Variants = {
+  rest: ({ slot, riseY, insideY, count }: CardCustom) => ({
+    x: [null, 0, 0],
+    y: [null, riseY, insideY],
+    rotate: [null, 0, 0],
+    scale: [null, 0.78, 0.5],
+    opacity: [null, 1, 0],
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.55,
+      times: [0, 0.55, 1],
+      ease: [SINK, SINK],
+      delay: (count - 1 - slot.order) * 0.03,
+    },
+  }),
+  out: ({ slot, riseY }: CardCustom) => ({
+    x: [null, 0, slot.x],
+    y: [null, riseY, slot.y],
+    rotate: [null, 0, slot.rotate],
+    scale: [null, 0.78, 1],
+    opacity: [null, 1, 1],
+    filter: "blur(0px)",
+    transition: {
+      duration: 0.9,
+      times: [0, 0.36, 1],
+      ease: [RISE, SETTLE],
+      delay: 0.16 + slot.order * 0.06,
+    },
+  }),
+  gone: ({ slot }: CardCustom) => ({
+    x: slot.gx,
+    y: slot.gy,
+    rotate: slot.rotate * 1.6,
+    scale: 1.7,
+    opacity: 0,
+    filter: "blur(10px)",
+    transition: { duration: 0.75, ease: [0.55, 0, 0.45, 1], delay: slot.order * 0.025 },
+  }),
+};
 
-function PopImage({
+function FanCard({
   src,
   index,
   count,
-  box,
+  slot,
   card,
-  ring,
-  out,
-  flyAway,
+  riseY,
+  insideY,
+  state,
+  focused,
+  dimmed,
+  float,
+  onFocusCard,
 }: {
   src: string;
   index: number;
   count: number;
-  box: number;
+  slot: Slot;
   card: { w: number; h: number };
-  ring: Ring;
-  out: boolean;
-  flyAway: boolean;
+  riseY: number;
+  insideY: number;
+  state: CardState;
+  focused: boolean;
+  dimmed: boolean;
+  float: boolean;
+  onFocusCard: (index: number | null) => void;
 }) {
-  // Slots spread evenly all the way around the box. The half-step offset
-  // keeps the spots straight above and below the box free.
-  const target = -90 + (360 / count) * (index + 0.5);
-
-  // Path: deep inside the box → straight up out of the opening → along the
-  // ring (the shorter way round) to its slot. So every image visibly climbs
-  // out of the box before travelling to its place.
-  const insideY = -box * 0.04;
-  const delta = ((((target + 90) % 360) + 540) % 360) - 180; // -180…180
-  const steps = Math.max(1, Math.ceil(Math.abs(delta) / 30));
-  const arc = Array.from({ length: steps + 1 }, (_, k) => {
-    const a = (-90 + (delta * k) / steps) * DEG;
-    return {
-      x: ring.cx + Math.cos(a) * ring.rx,
-      y: ring.cy + Math.sin(a) * ring.ry,
-    };
-  });
-  const path = [{ x: 0, y: insideY }, ...arc];
-  const final = path[path.length - 1];
-  const tilt = Math.sin(target * DEG) * -4 + Math.cos(target * DEG) * 6;
-
-  // Keyframes (all the same length so they share `times`)
-  const n = path.length;
-  const times = path.map((_, k) =>
-    k === 0 ? 0 : 0.35 + (0.65 * (k - 1)) / (n - 2),
-  );
-  const scales = path.map((_, k) => (k === 0 ? 0.45 : k === n - 1 ? 1 : 0.85));
-  const rotates = path.map((_, k) => (k === n - 1 ? tilt : 0));
-
-  const shown = {
-    x: [null, ...path.slice(1).map((p) => p.x)],
-    y: [null, ...path.slice(1).map((p) => p.y)],
-    scale: [null, ...scales.slice(1)],
-    rotate: [null, ...rotates.slice(1)],
-    opacity: 1,
-  };
-
-  const back = [...path].reverse();
-  const hidden = {
-    x: [null, ...back.slice(1).map((p) => p.x)],
-    y: [null, ...back.slice(1).map((p) => p.y)],
-    scale: [null, ...[...scales].reverse().slice(1)],
-    rotate: [null, ...back.slice(1).map(() => 0)],
-    opacity: [null, ...back.slice(1).map((_, k, arr) => (k === arr.length - 1 ? 0 : 1))],
-  };
-  const backTimes = [...times].reverse().map((t) => 1 - t);
-
-  // Ease per segment: speed up out of the box, glide along the ring at an
-  // even pace, settle into the slot (and the same in reverse)
-  const eases: ("easeIn" | "easeOut" | "linear")[] = Array.from(
-    { length: n - 1 },
-    (_, k) => (k === 0 ? "easeIn" : k === n - 2 ? "easeOut" : "linear"),
-  );
-
-  const gone = {
-    x: final.x * 2.4,
-    y: final.y * 2.4,
-    scale: 1.4,
-    opacity: 0,
-    rotate: tilt,
-  };
+  const out = state === "out";
+  // When this card has finished landing in the fan
+  const landed = 0.16 + slot.order * 0.06 + 0.8;
+  const floating = float && out && !focused;
 
   return (
     <motion.div
-      className="absolute overflow-hidden bg-muted shadow-2xl shadow-black/40 ring-1 ring-border"
+      className="absolute left-0 top-0"
       style={{
         width: card.w,
         height: card.h,
         marginLeft: -card.w / 2,
         marginTop: -card.h / 2,
+        z: focused ? 160 : slot.depth,
+        pointerEvents: out ? "auto" : "none",
       }}
-      initial={{ x: 0, y: insideY, scale: 0.45, rotate: 0, opacity: 0 }}
-      animate={flyAway ? gone : out ? shown : hidden}
-      transition={
-        flyAway
-          ? { duration: 0.7, ease: [0.55, 0, 0.45, 1] }
-          : out
-            ? {
-                duration: 0.95,
-                times,
-                ease: eases,
-                // lid opens first, then the images climb out one by one
-                delay: 0.15 + index * 0.07,
-                opacity: { duration: 0.01, delay: 0.15 + index * 0.07 },
-              }
-            : {
-                duration: 0.55,
-                times: backTimes,
-                ease: eases,
-                delay: (count - 1 - index) * 0.02,
-              }
-      }
+      custom={{ slot, riseY, insideY, count } satisfies CardCustom}
+      variants={cardVariants}
+      initial={false}
+      animate={state}
+      onPointerEnter={() => {
+        if (out) onFocusCard(index);
+      }}
+      onPointerLeave={() => onFocusCard(null)}
     >
-      <Image
-        src={src}
-        alt=""
-        fill
-        sizes={GATE_IMAGE_SIZES}
-        className="object-cover"
-      />
+      {/* Slow idle drift once it has landed */}
+      <motion.div
+        className="size-full"
+        animate={floating ? { y: [0, -5, 0] } : { y: 0 }}
+        transition={
+          floating
+            ? { duration: 3.2 + (index % 3) * 0.6, repeat: Infinity, ease: "easeInOut", delay: landed }
+            : { duration: 0.4 }
+        }
+      >
+        {/* The frame itself: lifts when pointed at, dims when another one is */}
+        <motion.div
+          className="relative size-full overflow-hidden rounded-[3px] bg-neutral-900"
+          style={{
+            boxShadow:
+              "0 22px 45px -14px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.08)",
+          }}
+          animate={{
+            scale: focused ? 1.14 : 1,
+            y: focused ? -12 : 0,
+            filter: dimmed ? "brightness(0.4) saturate(0.5)" : "brightness(1) saturate(1)",
+          }}
+          transition={{ type: "spring", stiffness: 260, damping: 24 }}
+        >
+          <Image
+            src={src}
+            alt=""
+            fill
+            sizes={GATE_IMAGE_SIZES}
+            className={`object-cover transition-transform duration-700 ease-out ${focused ? "scale-110" : "scale-100"}`}
+          />
+
+          {/* Film grain */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-30 mix-blend-overlay"
+            style={{ backgroundImage: GRAIN, backgroundSize: "140px 140px" }}
+          />
+
+          {/* Vignette, darker at the foot for the frame number */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to top, rgb(0 0 0 / 0.65), transparent 45%), radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.35))",
+            }}
+          />
+
+          <span className="absolute bottom-1.5 left-2 font-mono text-[9px] tracking-[0.2em] text-white/85">
+            {pad(index + 1)}
+            <span className="text-white/40">/{pad(count)}</span>
+          </span>
+
+          {/* A streak of light sweeps across once it lands */}
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-y-0 -left-1/2 w-1/2"
+            style={{
+              background:
+                "linear-gradient(105deg, transparent, rgb(255 255 255 / 0.32), transparent)",
+            }}
+            initial={false}
+            animate={{ x: out ? "400%" : "0%" }}
+            transition={out ? { duration: 0.9, ease: "easeOut", delay: landed } : { duration: 0 }}
+          />
+
+          {/* Frame edge */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-[3px] ring-1 ring-inset ring-white/15"
+          />
+        </motion.div>
+      </motion.div>
     </motion.div>
   );
 }

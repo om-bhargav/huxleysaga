@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
-import { AnimatePresence, motion, useInView, useReducedMotion, type Variants } from 'framer-motion';
+import { motion, useInView, useReducedMotion, type Variants } from 'framer-motion';
 import { GlitchImage, GlitchScope, useGlitchTrigger } from '@/components/shared/GlitchImage'; // adjust path
 
 export type RevealDirection = 'top-down' | 'bottom-up' | 'left-right' | 'right-left';
@@ -10,6 +10,12 @@ export type RevealDirection = 'top-down' | 'bottom-up' | 'left-right' | 'right-l
 type Ease = [number, number, number, number];
 
 const defaultEase: Ease = [0.76, 0, 0.24, 1];
+
+/* Never keep a frame empty for longer than this if an image is slow or broken */
+const LOAD_TIMEOUT = 8000;
+
+/* Start downloading once the frame is this close to the viewport */
+const PRELOAD_MARGIN = '600px';
 
 /* Start state for each direction: fully inset on the side the wipe travels towards */
 const hiddenClip: Record<RevealDirection, string> = {
@@ -68,8 +74,10 @@ export type RevealImageProps = {
 /**
  * An image that wipes in from any side, optionally as a GlitchImage.
  *
- * Change `src` and the new image wipes in over the old one, which dims underneath
- * and is removed once the wipe finishes (AnimatePresence keyed by src).
+ * The wipe waits until the image has actually loaded and decoded, so it never
+ * reveals an empty frame. Change `src` and the old image stays fully visible
+ * until the new one is ready; then the new one wipes in over it while the old
+ * one dims underneath, and the old one is removed once the wipe lands.
  */
 export function RevealImage(props: RevealImageProps) {
   // Already inside a GlitchScope? useGlitchTrigger returns {} when there isn't one.
@@ -108,28 +116,44 @@ function RevealImageInner({
   glitchFrameMs,
   children,
 }: RevealImageProps) {
-  // The clip sits on the inner layer, never on the element being watched:
+  // The clip sits on the inner layers, never on the element being watched:
   // a box clipped to nothing reads as off-screen to an observer and would never reveal.
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once, amount });
   const reduceMotion = useReducedMotion();
   const active = trigger === 'mount' || inView;
 
+  // The image sits inside a layer clipped to nothing until it has loaded. Browsers treat
+  // a lazy image in there as invisible and never start it, so the wipe would wait forever
+  // (until a click or re-render happened to nudge it). Instead, the unclipped frame is
+  // watched, and the image is added and loaded eagerly once the frame comes near the screen.
+  const near = useInView(ref, { once: true, margin: PRELOAD_MARGIN });
+  const load = priority || trigger === 'mount' || near;
+
   // Fires a burst on every GlitchImage in the surrounding scope
   const fireGlitch = useGlitchTrigger().onMouseEnter;
+
+  // One layer per src: the current image, plus the incoming one during a swap.
+  // A new src is added during render (React's "adjust state when a prop changes" pattern).
+  const [layers, setLayers] = useState<string[]>([src]);
+  const [readySrc, setReadySrc] = useState<string | null>(null);
+  const top = layers[layers.length - 1];
+  if (top !== src) {
+    setLayers([...layers.slice(-1), src]); // keep at most the visible image + the new one
+  }
 
   // Reduced motion: a plain fade instead of a moving wipe (GlitchImage already skips its bursts)
   const variants: Variants = reduceMotion
     ? {
-        hidden: { opacity: 0, zIndex: 1, transition: { duration: 0.3 } },
-        show: { opacity: 1, zIndex: 1, transition: { duration: 0.4, delay } },
-        exit: { opacity: 0, zIndex: 0, transition: { duration: 0.4 } },
+        hidden: { opacity: 0, transition: { duration: 0.3 } },
+        show: { opacity: 1, transition: { duration: 0.4, delay } },
+        dim: { opacity: 1 },
       }
     : {
-        hidden: { clipPath: hiddenClip[direction], zIndex: 1, transition: { duration: duration * 0.7, ease } },
-        show: { clipPath: shownClip, zIndex: 1, transition: { duration, delay, ease } },
+        hidden: { clipPath: hiddenClip[direction], filter: 'brightness(1)', transition: { duration: duration * 0.7, ease } },
+        show: { clipPath: shownClip, filter: 'brightness(1)', transition: { duration, delay, ease } },
         // The outgoing image stays put and dims while the new one wipes over it
-        exit: { zIndex: 0, filter: 'brightness(0.4)', transition: { duration: duration + delay, ease } },
+        dim: { clipPath: shownClip, filter: 'brightness(0.4)', transition: { duration, ease } },
       };
 
   return (
@@ -138,43 +162,140 @@ function RevealImageInner({
       onMouseEnter={glitch && glitchOnHover ? fireGlitch : undefined}
       className={cn('relative overflow-hidden', className)}
     >
-      <AnimatePresence>
-        <motion.div
-          key={src}
-          variants={variants}
-          initial="hidden"
-          animate={active ? 'show' : 'hidden'}
-          exit="exit"
-          onAnimationComplete={(definition) => {
-            if (glitch && glitchOnReveal && definition === 'show') fireGlitch?.();
-          }}
-          className="absolute inset-0 will-change-[clip-path]"
-        >
-          {glitch ? (
-            <GlitchImage
-              src={src}
-              alt={alt}
-              sizes={sizes}
-              priority={priority}
-              className={imageClassName}
-              frames={glitchFrames}
-              frameMs={glitchFrameMs}
-            />
-          ) : (
-            <Image
-              src={src}
-              alt={alt}
-              fill
-              unoptimized={unoptimized}
-              sizes={sizes}
-              priority={priority}
-              className={cn('object-cover', imageClassName)}
-            />
-          )}
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      {layers.map((layerSrc, i) => {
+        const isTop = i === layers.length - 1;
+        // Older layers dim only once the image on top is ready and starting its wipe
+        const covered = !isTop && readySrc === top && active;
+
+        return (
+          <RevealLayer
+            key={layerSrc}
+            load={load}
+            variants={variants}
+            state={covered ? 'dim' : isTop && active && readySrc === layerSrc ? 'show' : isTop ? 'hidden' : 'show'}
+            onReady={() => setReadySrc((current) => (isTop ? layerSrc : current))}
+            onShown={() => {
+              if (!isTop) return;
+              // The new image has landed: drop everything underneath it
+              setLayers((current) => (current[current.length - 1] === layerSrc ? [layerSrc] : current));
+              if (glitch && glitchOnReveal) fireGlitch?.();
+            }}
+          >
+            {glitch ? (
+              <GlitchImage
+                src={layerSrc}
+                alt={alt}
+                sizes={sizes}
+                priority={priority}
+                className={imageClassName}
+                frames={glitchFrames}
+                frameMs={glitchFrameMs}
+                loading={priority ? undefined : 'eager'}
+                // The wipe is the reveal here, so the image shouldn't also fade in underneath it
+                fadeIn={false}
+              />
+            ) : (
+              <Image
+                src={layerSrc}
+                alt={alt}
+                fill
+                unoptimized={unoptimized}
+                sizes={sizes}
+                priority={priority}
+                loading={priority ? undefined : 'eager'}
+                className={cn('object-cover', imageClassName)}
+              />
+            )}
+            {children}
+          </RevealLayer>
+        );
+      })}
     </div>
+  );
+}
+
+/**
+ * One image layer. Once `load` is on it renders its image, then reports `onReady`
+ * when the <img> inside has loaded and decoded (or failed, or timed out). This works
+ * the same for a plain Image and for GlitchImage, since it listens to whatever <img>
+ * ends up inside.
+ */
+function RevealLayer({
+  load,
+  variants,
+  state,
+  onReady,
+  onShown,
+  children,
+}: {
+  load: boolean;
+  variants: Variants;
+  state: 'hidden' | 'show' | 'dim';
+  onReady: () => void;
+  onShown: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !load) return;
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      onReadyRef.current();
+    };
+    // Wait for decoding too, so the first painted frame of the wipe already has the picture
+    const decodeThenFinish = (img: HTMLImageElement) => {
+      img.decode().catch(() => undefined).then(finish);
+    };
+
+    // Already loaded (cached, or loaded before this effect ran)
+    const existing = el.querySelector('img');
+    if (existing?.complete && existing.naturalWidth > 0) {
+      decodeThenFinish(existing);
+      return () => {
+        done = true;
+      };
+    }
+
+    // load/error don't bubble, so listen in the capture phase to catch the inner <img>
+    const onEvent = (e: Event) => {
+      if (!(e.target instanceof HTMLImageElement)) return;
+      if (e.type === 'error') finish();
+      else decodeThenFinish(e.target);
+    };
+    el.addEventListener('load', onEvent, true);
+    el.addEventListener('error', onEvent, true);
+    const timeout = window.setTimeout(finish, LOAD_TIMEOUT);
+
+    return () => {
+      done = true;
+      el.removeEventListener('load', onEvent, true);
+      el.removeEventListener('error', onEvent, true);
+      window.clearTimeout(timeout);
+    };
+  }, [load]);
+
+  return (
+    <motion.div
+      ref={ref}
+      variants={variants}
+      initial="hidden"
+      animate={state}
+      onAnimationComplete={(definition) => {
+        if (definition === 'show') onShown();
+      }}
+      className="absolute inset-0 will-change-[clip-path]"
+    >
+      {load && children}
+    </motion.div>
   );
 }
 

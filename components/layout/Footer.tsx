@@ -34,7 +34,7 @@ export default function Footer() {
               <ul className="flex flex-col gap-3 font-semibold lg:gap-2">
                 {col.links.map((link) => (
                   <li key={link}>
-                    <Link href={`/${link.toLocaleLowerCase()}`} className="tracking-widest transition-opacity hover:opacity-60">
+                    <Link href={`/${link.toLocaleLowerCase() === "home" ? "" : link.toLocaleLowerCase()}`} className="tracking-widest transition-opacity hover:opacity-60">
                       {link}
                     </Link>
                   </li>

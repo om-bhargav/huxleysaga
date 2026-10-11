@@ -94,7 +94,7 @@ export function Gallery({ universe }: { universe: Universe }) {
                 glitchOnHover
                 src={image.src}
                 alt={image.caption}
-                direction={i % 2 ? 'right-left' : 'left-right'}
+                direction={"bottom-up"}
                 delay={(i % 4) * 0.08}
                 amount={0.2}
                 sizes="(min-width: 1024px) 23vw, 46vw"

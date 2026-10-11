@@ -15,7 +15,7 @@ export default function AboutQuote() {
   const words = quote.split(' ');
 
   return (
-    <section className="px-3  font-heading uppercase">
+    <section className="px-3 uppercase">
       <Divider />
 
       <motion.figure
@@ -24,7 +24,7 @@ export default function AboutQuote() {
         viewport={{ once: true, amount: 0.3 }}
         className="mt-4"
       >
-        <blockquote className="max-w-[24ch] text-[clamp(1.5rem,3.6vw,3.25rem)] leading-[1.05] tracking-wide text-white max-lg:max-w-none">
+        <blockquote className="max-w-[24ch] font-heading text-[clamp(1.5rem,3.6vw,3.25rem)] leading-[1.05] tracking-wide text-white max-lg:max-w-none">
           <span className="sr-only">{quote}</span>
           <span aria-hidden="true">
             {words.map((word, i) => (

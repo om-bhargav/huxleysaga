@@ -56,7 +56,7 @@ const features: Feature[] = [
 /** Press, as ruled rows: outlet, headline, and a view link out. */
 export default function AboutPress() {
   return (
-    <section className="px-3 font-heading uppercase">
+    <section className="px-3 uppercase">
       <SectionIntro title="Press" aside={`[${String(features.length).padStart(2, '0')}]`} />
 
       <motion.ul
@@ -83,10 +83,10 @@ export default function AboutPress() {
                 className="grid gap-x-3 gap-y-2 py-5 text-white transition-colors hover:bg-white/3 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-white md:grid-cols-[12rem_minmax(0,1fr)_5rem] md:items-baseline md:px-1"
               >
                 <p className="text-[11px] tracking-widest text-white/40 sm:text-[13px]">
-                  <HoverHighlight className="-ml-1">{feature.outlet}</HoverHighlight>
+                  <HoverHighlight className="-ml-1 font-heading">{feature.outlet}</HoverHighlight>
                 </p>
 
-                <p className="text-xs leading-relaxed tracking-wider sm:text-sm">{feature.title}</p>
+                <p className="text-xs leading-relaxed font-heading tracking-wider sm:text-sm">{feature.title}</p>
 
                 <p className="text-[11px] tracking-widest text-white/40 md:text-right sm:text-[13px]">
                   <HoverHighlight className="-ml-1" delay={0.05}>

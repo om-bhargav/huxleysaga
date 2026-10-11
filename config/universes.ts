@@ -42,7 +42,7 @@ export type Universe = {
   /** Section 6 palette. `ink` is the page ground, `paper` the text on it. */
   palette: { ink: string; paper: string; accent: string; accentSoft: string };
   /** Which display face from `fonts/universes.ts` this page sets */
-  display: 'rye' | 'bebas' | 'cinzel' | 'rajdhani' | 'anton' | 'garamond';
+display: 'stencil' | 'western' | 'astroz' | 'morris' | 'garamond';
   /** Spec's design-direction notes, surfaced in the page as production notes */
   direction: { type: string; motion: string; cursor: string; reveal: string; gallery: string };
   hero: { poster: string; videoNote: string;video?: string;};
@@ -66,9 +66,9 @@ export const universes: Universe[] = [
     genre: 'Wild west',
     hook: 'Five outlaws. Cursed wine. New powers.',
     palette: { ink: '#2A1810', paper: '#D9B382', accent: '#B5482A', accentSoft: '#E0A93B' },
-    display: 'rye',
+    display: 'western',
     direction: {
-      type: 'Display: Rye or similar weathered wood-type. Body: Alegreya Sans. Wanted-poster headlines with torn paper edges.',
+      type: 'Display: Go 2 Old Western. Body: Alegreya Sans. Wanted-poster headlines with torn paper edges.',
       motion: 'Scroll travels along a train track from the heist to Dusthaven. Dust drifts across the frame. Sections shift dusk-to-night.',
       cursor: 'Bullet-hole cursor that leaves a fading mark on click. Optional: wind, distant train, spurs.',
       reveal:
@@ -166,9 +166,9 @@ export const universes: Universe[] = [
     genre: 'Spy',
     hook: 'Infiltrating a facility hiding tech that could control nations.',
     palette: { ink: '#0B0B0F', paper: '#E9E6DF', accent: '#C4122F', accentSoft: '#8A8F98' },
-    display: 'bebas',
+    display: 'stencil',
     direction: {
-      type: 'Display: Bebas Neue or Oswald, stencil-style. Body and labels: IBM Plex Mono (typewriter dossier).',
+      type: 'Display: Stencil. Body and labels: IBM Plex Mono (typewriter dossier).',
       motion: 'Hard cuts and laser-grid wipes. Sections are case-file tabs. Text partly redacted with black bars that lift on hover.',
       cursor: 'Round spotlight that reveals redacted text. Optional: low hum, shutter clicks.',
       reveal:
@@ -252,9 +252,9 @@ export const universes: Universe[] = [
     genre: 'Spy / thriller',
     hook: "She let them take her. Now she's Cargo #07.",
     palette: { ink: '#14091A', paper: '#E8D9C4', accent: '#C9A227', accentSoft: '#6B1E3F' },
-    display: 'cinzel',
+    display: 'stencil',
     direction: {
-      type: 'Display: Cinzel or a high-contrast serif. Body: Cormorant Garamond at a readable size. Gold hairline rules and numbered lots.',
+      type: 'Display: Stencil. Body: Cormorant Garamond at a readable size. Gold hairline rules and numbered lots.',
       motion: 'Fine silk threads draw across the screen as you scroll, tying sections together. Slow, deliberate transitions, like an auction reveal.',
       cursor: 'Small auction paddle showing a lot number on hover. Optional: muffled crowd, a gavel.',
       reveal: "A cargo tag (#07) swings into view, flips, and a mask lifts to reveal the character. Tag numbers become each character's label.",
@@ -328,9 +328,9 @@ export const universes: Universe[] = [
     genre: 'Gaming',
     hook: 'The perfect world you designed becomes your prison.',
     palette: { ink: '#05060F', paper: '#E6F6FF', accent: '#00F0FF', accentSoft: '#FF2BD6' },
-    display: 'rajdhani',
+    display: 'astroz',
     direction: {
-      type: 'Display: Rajdhani or Orbitron-style geometric caps. Body and UI: JetBrains Mono. Everything sits inside thin HUD frames.',
+      type: 'Display: Astroz. Body and UI: JetBrains Mono. Everything sits inside thin HUD frames.',
       motion: 'A loop counter in the corner rises as you scroll. Sections change with glitch and corruption effects; moving between pages plays a "respawn".',
       cursor: 'Crosshair cursor. Optional: digital hum, respawn chime.',
       reveal: 'Character-select screen: portrait compiles out of falling code, stat bars fill, a class tag appears. Bios read like patch notes.',
@@ -431,9 +431,9 @@ export const universes: Universe[] = [
     genre: 'Superhero',
     hook: 'Heroes of legend, trapped in a witch duo\'s tournament.',
     palette: { ink: '#1B1B24', paper: '#EDE9F5', accent: '#F2B705', accentSoft: '#D6247F' },
-    display: 'anton',
+    display: 'morris',
     direction: {
-      type: 'Display: Anton or a tall condensed poster face. Body: Barlow. Halftone dots and bold outlines.',
+      type: 'Display: Morris Roman Black. Body: Barlow. Halftone dots and bold outlines.',
       motion: 'Diagonal comic-panel wipes between sections. Chain links drop across the screen and lock as dividers. Impact frames on click.',
       cursor: 'Chain-link cursor that snaps taut on a character. Optional: clanking chains, arena crowd.',
       reveal: 'Tournament lock-in: chains snap, the fighter card slams into the bracket with a shockwave. The two witch queens get a split-screen VS reveal.',

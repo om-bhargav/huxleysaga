@@ -29,7 +29,7 @@ export default function SagaIntro({
   const words = text.split(' ');
 
   return (
-    <section className="bg-black px-3 pb-24 pt-20 font-heading uppercase">
+    <section className="px-3 pb-24 pt-20 uppercase">
       <Divider />
 
       <motion.div

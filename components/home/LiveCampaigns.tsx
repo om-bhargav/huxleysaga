@@ -215,7 +215,7 @@ export default function LiveCampaigns({
   const reduceMotion = useReducedMotion();
 
   return (
-    <section className="overflow-hidden bg-black px-3 pb-10 pt-20 font-heading uppercase">
+    <section className="overflow-hidden px-3 pb-10 pt-20 uppercase">
       <SectionIntro title={title} text={text} aside={`[${String(campaigns.length).padStart(2, '0')}]`} />
 
       <motion.p

@@ -80,13 +80,14 @@ export default function Hero({
 
           {/* Wordmark rises in on load */}
           <div aria-hidden="true">
-            <StretchText className="text-[14vw] font-bold leading-[0.78]">
-              {word.split('').map((char, i) => (
+            <StretchText className="font-heading text-[14vw] leading-[0.78]">
+              {Array.from(word).map((char, i) => (
                 <motion.span
                   key={i}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 1.6 + revealOrder.indexOf(i + 1) * 0.50 }}
+                  transition={{ duration: 1, ease: 'easeOut', delay: 1.6 + revealOrder.indexOf(i + 1) * 0.5 }}
+                  className={char === "'" || char === '’' ? 'font-sans' : undefined}
                 >
                   {char}
                 </motion.span>

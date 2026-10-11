@@ -48,7 +48,7 @@ const channels: Channel[] = [
 /** Who to write to for what, each row opening a mail draft with the subject already set. */
 export default function ContactChannels() {
   return (
-    <section className="px-3 font-heading uppercase">
+    <section className="px-3 uppercase">
       <SectionIntro title="What Are You After" aside={`[${String(channels.length).padStart(2, '0')}]`} />
 
       <motion.ul
@@ -76,7 +76,7 @@ export default function ContactChannels() {
                   <HoverHighlight className="-ml-1">{channel.title}</HoverHighlight>
                 </h3>
 
-                <p className="text-xs leading-relaxed tracking-wider text-white/40 sm:text-sm">{channel.text}</p>
+                <p className="text-xs font-heading leading-relaxed tracking-wider text-white/40 sm:text-sm">{channel.text}</p>
 
                 <p className="text-[11px] tracking-widest text-white/40 sm:text-[13px] md:text-right">
                   <HoverHighlight className="-ml-1" delay={0.05}>

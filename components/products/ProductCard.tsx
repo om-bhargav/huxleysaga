@@ -63,7 +63,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <motion.article
       variants={cardReveal}
-      className="group/card flex flex-col border border-white/10 bg-neutral-950 p-3.5 font-heading uppercase text-white"
+      className="group/card flex flex-col border border-white/10 bg-neutral-950 p-3.5 uppercase text-white"
     >
       {/* Edition picker */}
       <div className="flex items-center gap-4 text-[11px] tracking-widest sm:text-[13px]">

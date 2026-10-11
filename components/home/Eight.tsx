@@ -65,7 +65,7 @@ function CornerTicks() {
 
 export default function StatsSection() {
   return (
-    <section className="px-3 pb-14 pt-5 font-heading uppercase text-white">
+    <section className="px-3 pb-14 pt-5 uppercase text-white">
       <Divider />
 
       <motion.h2
@@ -94,7 +94,7 @@ export default function StatsSection() {
             <CornerTicks />
 
             {/* Grey box hugging the number */}
-            <span className="self-start bg-foreground/5 px-1.5 text-[clamp(2.75rem,4.5vw,5rem)] font-light">
+            <span className="self-start font-heading bg-foreground/5 px-1.5 text-[clamp(2.75rem,4.5vw,5rem)] font-light">
               <RollingNumber value={stat.value} suffix={stat.suffix} delay={i * 150} />
             </span>
 
