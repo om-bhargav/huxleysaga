@@ -1,29 +1,36 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useId, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { submitContact } from '@/hooks/useContactRequests';
+import { ApiError } from '@/lib/api/client';
+import { contactFormSchema, type ContactFormValues } from '@/lib/contact/schema';
+import { CONTACT_MESSAGE_MAX, CONTACT_TOPICS, topicLabel, type ContactTopic } from '@/lib/contact/types';
 import { FrameButton } from '@/components/shared/FrameButton'; // adjust path
 import { SectionIntro, flicker } from '@/components/shared/SectionIntro'; // adjust path
+import { toast } from 'sonner';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
 /* The one address the live site publishes */
 export const CONTACT_EMAIL = 'info@huxleysaga.com';
 
-/* Where the form posts. Swap for your route, Formspree, Resend, etc. */
-const CONTACT_ENDPOINT = '/api/contact';
+/* Topics and their hints live in lib/contact/types, shared with the API and the admin */
+const topics = CONTACT_TOPICS;
+const MESSAGE_MAX = CONTACT_MESSAGE_MAX;
 
-const MESSAGE_MAX = 2000;
+const PICK_TOPIC_EVENT = 'contact:pick-topic';
+const isTopic = (value: unknown): value is ContactTopic => topics.some((t) => t.value === value);
 
-/* Placeholder copy: swap in your real text */
-const topics = [
-  { id: 'Press', hint: 'Interviews, features, press assets' },
-  { id: 'Licensing', hint: 'Film, games, collaborations' },
-  { id: 'Wholesale', hint: 'Stockists and bulk orders' },
-  { id: 'Orders', hint: 'Shipping, returns, order issues' },
-  { id: 'Other', hint: 'Anything else' },
-] as const;
-type Topic = (typeof topics)[number]['id'];
+/**
+ * Pick a topic in the contact form and jump to it, from anywhere on the contact page
+ * (e.g. the channel rows in ContactChannels). Other pages can link to /contact?topic=ORDERS instead.
+ */
+export function pickContactTopic(topic: ContactTopic) {
+  window.dispatchEvent(new CustomEvent(PICK_TOPIC_EVENT, { detail: topic }));
+}
 
 /* Placeholder facts: swap in your real details */
 const details: { label: string; value: string }[] = [
@@ -39,23 +46,13 @@ const socials: { label: string; href: string }[] = [
 ];
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
-type Fields = { name: string; email: string; topic: Topic; message: string; website: string };
-type FieldErrors = Partial<Record<'name' | 'email' | 'message', string>>;
+type Sent = Pick<ContactFormValues, 'name' | 'email' | 'topic'>;
 
-const emptyFields: Fields = { name: '', email: '', topic: 'Press', message: '', website: '' };
-
-function validate(f: Fields): FieldErrors {
-  const errors: FieldErrors = {};
-  if (!f.name.trim()) errors.name = 'Tell us who you are';
-  if (!f.email.trim()) errors.email = 'We need an address to reply to';
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) errors.email = 'That address looks off';
-  if (f.message.trim().length < 10) errors.message = 'A little more detail, please (10+ characters)';
-  return errors;
-}
+const emptyFields: ContactFormValues = { name: '', email: '', topic: 'PRESS', message: '', website: '' };
 
 /** Pre-filled mailto, so a failed send never loses what someone wrote. */
-function mailtoFor(f: Fields) {
-  const subject = `[${f.topic}] ${f.name.trim() || 'Website enquiry'}`;
+function mailtoFor(f: ContactFormValues) {
+  const subject = `[${topicLabel(f.topic)}] ${f.name.trim() || 'Website enquiry'}`;
   return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(f.message)}`;
 }
 
@@ -80,11 +77,23 @@ export default function ContactIntro() {
   };
 
   const [copied, setCopied] = useState(false);
-  const [fields, setFields] = useState<Fields>(emptyFields);
-  const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>('idle');
-  const [lastSent, setLastSent] = useState<Fields | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [lastSent, setLastSent] = useState<Sent | null>(null);
+
+  /* Same zod schema as POST /api/contact, so the errors here are the server's errors */
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    setFocus,
+    setError,
+    getValues,
+    reset,
+    formState: { errors },
+  } = useForm<ContactFormValues>({ resolver: zodResolver(contactFormSchema), defaultValues: emptyFields });
+
+  const [topic, message] = useWatch({ control, name: ['topic', 'message'] });
 
   // Clear the confirmation on its own so the button doesn't stay stuck on "Copied"
   useEffect(() => {
@@ -102,62 +111,79 @@ export default function ContactIntro() {
     }
   };
 
-  const set = <K extends keyof Fields>(key: K, value: Fields[K]) => {
-    setFields((prev) => ({ ...prev, [key]: value }));
-    // Drop a field's error as soon as it's being fixed
-    if (key in errors) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  /* Typing again after a failed send clears the error */
+  const clearSendError = () => {
     if (status === 'error') setStatus('idle');
   };
 
-  /* Clicking a topic on the left picks it in the form and drops the cursor in the message */
-  const pickTopic = (topic: Topic) => {
-    set('topic', topic);
-    if (status === 'sent') setStatus('idle');
-    const message = document.getElementById(ids.message);
-    message?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    message?.focus({ preventScroll: true });
+  /* Clicking a topic picks it in the form and drops the cursor in the message */
+  const pickTopic = (value: ContactTopic) => {
+    setValue('topic', value);
+    const focusMessage = () => {
+      document.getElementById(ids.message)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFocus('message');
+    };
+    if (status === 'sent') {
+      /* The "Thanks" panel is showing: bring the form back, then focus once it has animated in */
+      setStatus('idle');
+      window.setTimeout(focusMessage, 450);
+    } else {
+      focusMessage();
+    }
   };
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  /* Topic picks from other sections (pickContactTopic) and from a ?topic= link */
+  const onPickTopic = useEffectEvent((value: unknown) => {
+    if (isTopic(value)) pickTopic(value);
+  });
+  useEffect(() => {
+    /* Wait a frame so the page has laid out before scrolling to the form */
+    const fromUrl = new URLSearchParams(window.location.search).get('topic')?.toUpperCase();
+    const frame = fromUrl ? window.requestAnimationFrame(() => onPickTopic(fromUrl)) : 0;
+
+    const listener = (event: Event) => onPickTopic((event as CustomEvent).detail);
+    window.addEventListener(PICK_TOPIC_EVENT, listener);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(PICK_TOPIC_EVENT, listener);
+    };
+  }, []);
+
+  /* Invalid fields are caught by the resolver first; react-hook-form focuses the first one */
+  const submit = handleSubmit(async (values) => {
     if (status === 'sending') return;
 
-    const found = validate(fields);
-    setErrors(found);
-    const firstInvalid = (['name', 'email', 'message'] as const).find((key) => found[key]);
-    if (firstInvalid) {
-      document.getElementById(ids[firstInvalid])?.focus();
-      return;
-    }
-
     // Honeypot: real people never see this field, bots fill it. Pretend it worked.
-    if (fields.website) {
+    if (values.website) {
       setStatus('sent');
       return;
     }
 
     setStatus('sending');
     try {
-      const res = await fetch(CONTACT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: fields.name.trim(),
-          email: fields.email.trim(),
-          topic: fields.topic,
-          message: fields.message.trim(),
-        }),
-      });
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-      setLastSent(fields);
-      setFields(emptyFields);
+      await submitContact(values);
+      setLastSent({ name: values.name, email: values.email, topic: values.topic });
+      reset(emptyFields);
       setStatus('sent');
-    } catch {
-      setStatus('error');
+      toast.success("Message Sent Successfully!");
+    } catch (error) {
+      /* The server disagreed with a field: show it under that field */
+      const fields =
+        error instanceof ApiError && error.status === 422
+          ? (error.data as Partial<Record<keyof ContactFormValues, string[]>> | null)
+          : null;
+      if (fields && Object.keys(fields).length) {
+        Object.entries(fields).forEach(([name, messages]) =>
+          setError(name as keyof ContactFormValues, { message: messages?.[0] }, { shouldFocus: true }),
+        );
+        setStatus('idle');
+      } else {
+        setStatus('error');
+      }
     }
-  };
+  });
 
-  const remaining = MESSAGE_MAX - fields.message.length;
+  const remaining = MESSAGE_MAX - (message?.length ?? 0);
 
   return (
     <section className="px-3 uppercase">
@@ -219,13 +245,13 @@ export default function ContactIntro() {
             </motion.p>
 
             <ul className="mt-4">
-              {topics.map((topic, i) => {
-                const active = fields.topic === topic.id;
+              {topics.map((t, i) => {
+                const active = topic === t.value;
                 return (
-                  <motion.li key={topic.id} variants={flicker} custom={0.05 * i} className="border-t border-white/10">
+                  <motion.li key={t.value} variants={flicker} custom={0.05 * i} className="border-t border-white/10">
                     <button
                       type="button"
-                      onClick={() => pickTopic(topic.id)}
+                      onClick={() => pickTopic(t.value)}
                       aria-pressed={active}
                       className="group flex w-full items-baseline justify-between gap-4 py-3 text-left focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-white"
                     >
@@ -234,11 +260,11 @@ export default function ContactIntro() {
                           {String(i + 1).padStart(2, '0')}
                         </span>
                         <span className={`font-heading text-lg leading-none transition-opacity ${active ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'}`}>
-                          {topic.id}
+                          {t.label}
                         </span>
                       </span>
                       <span className="hidden text-right text-[10px] tracking-widest text-white/40 sm:inline sm:text-[11px]">
-                        {topic.hint}
+                        {t.hint}
                       </span>
                     </button>
                   </motion.li>
@@ -300,34 +326,8 @@ export default function ContactIntro() {
             className="h-full bg-neutral-950 p-3.5 text-white lg:p-6"
           >
             <AnimatePresence mode="wait" initial={false}>
-              {status === 'sent' ? (
-                <motion.div
-                  key="sent"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease } }}
-                  exit={{ opacity: 0, y: -12, transition: { duration: 0.3, ease } }}
-                  className="flex min-h-[420px] flex-col justify-between"
-                >
-                  <div>
-                    <p className={label}>Message received</p>
-                    <p className="mt-4 font-heading text-[clamp(1.5rem,3vw,2.75rem)] leading-none">
-                      Thanks{lastSent?.name ? `, ${lastSent.name.trim().split(' ')[0]}` : ''}.
-                    </p>
-                    <p className="mt-4 max-w-md text-sm leading-relaxed text-white/60">
-                      It&apos;s with the {lastSent?.topic ?? 'right'} team. Expect a reply at{' '}
-                      <span className="normal-case text-white">{lastSent?.email}</span> within two business days.
-                    </p>
-                  </div>
-                  <div className="mt-10 lg:max-w-[220px]">
-                    <FrameButton onClick={() => setStatus('idle')} className="w-full">
-                      Send another
-                    </FrameButton>
-                  </div>
-                </motion.div>
-              ) : (
                 <motion.form
                   key="form"
-                  ref={formRef}
                   onSubmit={submit}
                   noValidate
                   initial={{ opacity: 0 }}
@@ -345,18 +345,16 @@ export default function ContactIntro() {
                   <fieldset className="mt-6">
                     <legend className={label}>Topic</legend>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {topics.map((topic) => (
-                        <label key={topic.id} className="cursor-pointer">
+                      {topics.map((t) => (
+                        <label key={t.value} className="cursor-pointer">
                           <input
                             type="radio"
-                            name="topic"
-                            value={topic.id}
-                            checked={fields.topic === topic.id}
-                            onChange={() => set('topic', topic.id)}
+                            value={t.value}
+                            {...register('topic', { onChange: clearSendError })}
                             className="peer sr-only"
                           />
                           <span className="block border border-white/20 px-3 py-1.5 text-[11px] tracking-widest text-white/60 transition-colors hover:border-white/50 hover:text-white peer-checked:border-white peer-checked:bg-white peer-checked:text-black peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-white">
-                            {topic.id}
+                            {t.label}
                           </span>
                         </label>
                       ))}
@@ -364,31 +362,27 @@ export default function ContactIntro() {
                   </fieldset>
 
                   <div className="mt-8 grid gap-8 sm:grid-cols-2">
-                    <Field id={ids.name} label="Name" error={errors.name}>
+                    <Field id={ids.name} label="Name" error={errors.name?.message}>
                       <input
                         id={ids.name}
-                        name="name"
                         type="text"
                         autoComplete="name"
                         placeholder="Your name"
-                        value={fields.name}
-                        onChange={(e) => set('name', e.target.value)}
+                        {...register('name', { onChange: clearSendError })}
                         aria-invalid={!!errors.name}
                         aria-describedby={errors.name ? `${ids.name}-error` : undefined}
                         className={input}
                       />
                     </Field>
 
-                    <Field id={ids.email} label="Email" error={errors.email}>
+                    <Field id={ids.email} label="Email" error={errors.email?.message}>
                       <input
                         id={ids.email}
-                        name="email"
                         type="email"
                         inputMode="email"
                         autoComplete="email"
                         placeholder="you@example.com"
-                        value={fields.email}
-                        onChange={(e) => set('email', e.target.value)}
+                        {...register('email', { onChange: clearSendError })}
                         aria-invalid={!!errors.email}
                         aria-describedby={errors.email ? `${ids.email}-error` : undefined}
                         className={input}
@@ -400,25 +394,23 @@ export default function ContactIntro() {
                     <Field
                       id={ids.message}
                       label="Message"
-                      error={errors.message}
+                      error={errors.message?.message}
                       aside={
                         <span className={remaining < 100 ? 'text-white' : undefined} aria-hidden>
-                          {fields.message.length}/{MESSAGE_MAX}
+                          {message?.length ?? 0}/{MESSAGE_MAX}
                         </span>
                       }
                     >
                       <textarea
                         id={ids.message}
-                        name="message"
                         rows={6}
                         maxLength={MESSAGE_MAX}
                         placeholder={
-                          fields.topic === 'Orders'
+                          topic === 'ORDERS'
                             ? 'Your order number and what went wrong'
                             : 'What can we help with?'
                         }
-                        value={fields.message}
-                        onChange={(e) => set('message', e.target.value)}
+                        {...register('message', { onChange: clearSendError })}
                         aria-invalid={!!errors.message}
                         aria-describedby={errors.message ? `${ids.message}-error` : undefined}
                         className={`${input} min-h-[160px] resize-y`}
@@ -431,12 +423,10 @@ export default function ContactIntro() {
                     <label htmlFor={ids.website}>Website</label>
                     <input
                       id={ids.website}
-                      name="website"
                       type="text"
                       tabIndex={-1}
                       autoComplete="off"
-                      value={fields.website}
-                      onChange={(e) => set('website', e.target.value)}
+                      {...register('website')}
                     />
                   </div>
 
@@ -446,7 +436,7 @@ export default function ContactIntro() {
                     </p>
                     <div className="sm:w-[220px]">
                       {/* FrameButton must forward `type` and `disabled` to its <button> */}
-                      <FrameButton disabled={status === 'sending'} className="w-full">
+                      <FrameButton type="submit" disabled={status === 'sending'} className="w-full">
                         {status === 'sending' ? 'Sending…' : 'Send message'}
                       </FrameButton>
                     </div>
@@ -460,14 +450,14 @@ export default function ContactIntro() {
                       className="mt-6 border border-red-400/40 bg-red-400/5 p-3 text-[11px] leading-relaxed tracking-widest text-red-300"
                     >
                       That didn&apos;t go through. Nothing is lost:{' '}
-                      <a href={mailtoFor(fields)} className="underline underline-offset-4 hover:text-white">
+                      <a href={mailtoFor(getValues())} className="underline underline-offset-4 hover:text-white">
                         send it by email instead
                       </a>
                       .
                     </motion.p>
                   )}
                 </motion.form>
-              )}
+
             </AnimatePresence>
 
             {/* One place screen readers hear about sending */}

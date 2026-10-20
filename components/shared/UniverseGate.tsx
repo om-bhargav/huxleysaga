@@ -28,6 +28,10 @@ import { GATE_IMAGES, GATE_IMAGE_SIZES } from "@/lib/assets";
 
 const BRAND = "Night O'Clock";
 const BRAND_SUFFIX = "Studios";
+const TAGLINE = "Enter after dark.";
+
+const AGE_KEY = "noc-age-verified"; // localStorage key for a confirmed 18+ answer
+const LEAVE_HREF = "https://www.google.com"; // where "Leave" sends people by default
 
 const MAX_BOX = 240; // box width on large screens (px)
 const BOX_VW = 0.42; // box width on small screens (fraction of viewport width)
@@ -84,6 +88,14 @@ const theme = {
  * open     — gate removed
  */
 type Stage = "idle" | "opening" | "zooming" | "open";
+
+/**
+ * checking  — reading a saved answer (nothing shown yet, so no flash)
+ * ask       — the 18+ question is on screen
+ * confirmed — answered yes, the question is fading out
+ * ok        — the box is shown
+ */
+type AgeState = "checking" | "ask" | "confirmed" | "ok";
 
 /** Where the cards are: inside the box, fanned out above it, or flying past the camera */
 type CardState = "rest" | "out" | "gone";
@@ -169,8 +181,9 @@ function fanLayout(count: number, box: number, viewport: { w: number; h: number 
 /* ------------------------------------------------------------------ */
 
 /**
- * Wrap your page with this. A Night O'Clock Studios film box sits in the
- * middle of the screen.
+ * Wrap your page with this. First an age check asks the visitor to confirm
+ * they are 18+ (or leave). Once confirmed, a Night O'Clock Studios film box
+ * sits in the middle of the screen.
  * - Hover (or keyboard focus; on touch screens it happens by itself): the
  *   clapper-striped lid opens and the images rise out of the box and fan out
  *   above it like a hand of film frames. The fan tilts with the pointer, and
@@ -188,14 +201,30 @@ export default function UniverseGate({
   images = GATE_IMAGES,
   label = "Enter",
   onEnter,
+  ageGate = true,
+  rememberAge = true,
+  tagline = TAGLINE,
+  leaveHref = LEAVE_HREF,
+  onLeave,
 }: {
   children: ReactNode;
   images?: string[];
   label?: string;
   onEnter?: () => void;
+  /** Ask "are you 18+?" before showing the box */
+  ageGate?: boolean;
+  /** Remember a "yes" in localStorage so returning visitors go straight to the box */
+  rememberAge?: boolean;
+  /** Line under the brand on the age check */
+  tagline?: string;
+  /** Where "Leave" sends the visitor (ignored if `onLeave` is given) */
+  leaveHref?: string;
+  /** Custom handler for "Leave" */
+  onLeave?: () => void;
 }) {
   const reduceMotion = useReducedMotion();
   const [stage, setStage] = useState<Stage>("idle");
+  const [age, setAge] = useState<AgeState>(ageGate ? "checking" : "ok");
   const [preview, setPreview] = useState(false);
   const [touch, setTouch] = useState(false);
   const [focusCard, setFocusCard] = useState<number | null>(null);
@@ -205,10 +234,45 @@ export default function UniverseGate({
   const pageRef = useRef<HTMLDivElement>(null);
   const flapsWereOpen = useRef(false);
 
+  const verified = age === "ok";
+
   const onEnterRef = useRef(onEnter);
   useEffect(() => {
     onEnterRef.current = onEnter;
   }, [onEnter]);
+
+  // AGE CHECK — skip the question if this browser already said yes
+  useEffect(() => {
+    if (!ageGate) {
+      setAge("ok");
+      return;
+    }
+    let saved = false;
+    if (rememberAge) {
+      try {
+        saved = window.localStorage.getItem(AGE_KEY) === "1";
+      } catch {
+        // storage blocked (private mode etc.) — just ask
+      }
+    }
+    setAge(saved ? "ok" : "ask");
+  }, [ageGate, rememberAge]);
+
+  const confirmAge = () => {
+    if (rememberAge) {
+      try {
+        window.localStorage.setItem(AGE_KEY, "1");
+      } catch {
+        // not remembered, but still let them in
+      }
+    }
+    setAge("confirmed");
+  };
+
+  const leave = () => {
+    if (onLeave) onLeave();
+    else window.location.href = leaveHref;
+  };
 
   // Box size and fan follow the viewport
   useEffect(() => {
@@ -229,13 +293,15 @@ export default function UniverseGate({
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Touch screens can't hover, so they get the preview on their own
+  // Touch screens can't hover, so they get the preview on their own —
+  // but only once the box is actually on screen.
   useEffect(() => {
     if (!window.matchMedia("(hover: none)").matches) return;
     setTouch(true);
+    if (!verified) return;
     const t = window.setTimeout(() => setPreview(true), TOUCH_PREVIEW_DELAY);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [verified]);
 
   // While the page is mounted but still behind the gate, keep it inert
   useEffect(() => {
@@ -264,7 +330,7 @@ export default function UniverseGate({
     ]);
     const blockKeys = (e: KeyboardEvent) => {
       if (!scrollKeys.has(e.key)) return;
-      // Let Space still press the box
+      // Let Space still press buttons (the box, the age-check buttons)
       if (e.key === " " && e.target instanceof HTMLButtonElement) return;
       e.preventDefault();
     };
@@ -332,7 +398,7 @@ export default function UniverseGate({
   const holeSize = box * 0.5;
 
   const enter = () => {
-    if (stage !== "idle") return;
+    if (stage !== "idle" || !verified) return;
 
     if (reduceMotion) {
       setStage("open");
@@ -355,7 +421,7 @@ export default function UniverseGate({
 
   const mounted = stage !== "idle";
   const zooming = stage === "zooming";
-  const flapsOpen = preview || stage !== "idle";
+  const flapsOpen = verified && (preview || stage !== "idle");
 
   const cards = images.slice(0, MAX_CARDS);
   const fan = useMemo(() => fanLayout(cards.length, box, viewport), [cards.length, box, viewport]);
@@ -446,140 +512,295 @@ export default function UniverseGate({
               />
             </motion.div>
 
-            {/* BRAND CAPTION — below the box, clear of the fan */}
-            <motion.div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 flex flex-col items-center gap-2 px-4 text-center"
-              style={{ top: `calc(50% + ${box * 0.62}px)` }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: zooming ? 0 : 1, y: 0 }}
-              transition={{ duration: 0.6, delay: zooming ? 0 : 0.3 }}
+            {/* AGE CHECK — shown before the box. Once it has faded out, the
+                box rises in. */}
+            <AnimatePresence
+              onExitComplete={() => setAge((a) => (a === "confirmed" ? "ok" : a))}
             >
-              <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground sm:text-xs sm:tracking-[0.5em]">
-                {BRAND} {BRAND_SUFFIX}
-              </span>
-              <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.3em]">
-                {touch
-                  ? `Tap the box to ${label.toLowerCase()}`
-                  : `Hover to preview · Click to ${label.toLowerCase()}`}
-              </span>
-            </motion.div>
+              {age === "ask" && (
+                <AgeCheck
+                  key="age-check"
+                  tagline={tagline}
+                  flicker={!reduceMotion}
+                  onConfirm={confirmAge}
+                  onLeave={leave}
+                />
+              )}
+            </AnimatePresence>
 
-            {/* HOVER ZONE — a still element, so the box lifting on hover can't
-                pull itself out from under the pointer. The cards are inside it,
-                so pointing at them keeps the preview open. */}
-            <div
-              className="relative z-20"
-              style={{ width: box, height: box * 0.7 }}
-              onPointerEnter={hoverStart}
-              onPointerLeave={hoverEnd}
-            >
-              {/* While the fan is open, an arch over it keeps the preview open in
-                  the gap between the box and the cards. Hit-testing follows the
-                  rounded corners, so the empty corners of the screen don't count. */}
-              <div
-                aria-hidden="true"
-                className="absolute"
-                style={{
-                  left: box / 2 - reach.side,
-                  width: reach.side * 2,
-                  top: box * 0.35 + reach.top,
-                  height: box * 0.35 - reach.top,
-                  borderRadius: "50% 50% 0 0 / 70% 70% 0 0",
-                  pointerEvents: flapsOpen ? "auto" : "none",
-                }}
-              />
-
-              {/* Contact shadow: grounds the box, shrinks as it lifts */}
-              <motion.div
-                aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 rounded-[50%]"
-                style={{
-                  width: box * 1.15,
-                  height: box * 0.2,
-                  marginLeft: -box * 0.575,
-                  bottom: -box * 0.16,
-                  background:
-                    "radial-gradient(closest-side, color-mix(in oklch, black 60%, transparent), transparent)",
-                  filter: "blur(8px)",
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: zooming ? 0 : flapsOpen ? 0.55 : 0.85, scale: flapsOpen ? 0.88 : 1 }}
-                transition={{ duration: 0.6, ease: easeOutSoft }}
-              />
-
-              {/* FILM BOX — back half, cards, front half. The cards sit
-                  between the halves, so they start INSIDE the box (hidden by
-                  its front walls) and rise out of the opening. */}
-              <motion.button
-                type="button"
-                aria-label={`${label} ${BRAND} ${BRAND_SUFFIX}`}
-                onClick={enter}
-                onFocus={() => setPreview(true)}
-                onBlur={() => {
-                  if (!touch) setPreview(false);
-                }}
-                disabled={stage !== "idle"}
-                className="relative cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-8 focus-visible:ring-offset-background"
-                style={{ width: box, height: box * 0.7 }}
-                initial={{ opacity: 0, y: 30 }}
-                animate={
-                  zooming
-                    ? { opacity: 0, y: 0, scale: zoomScale * 0.5 }
-                    : { opacity: 1, y: flapsOpen ? -4 : 0, scale: 1 }
-                }
-                transition={
-                  zooming
-                    ? {
-                        scale: zoomTransition,
-                        opacity: { duration: 0.6, ease: "easeIn" },
-                      }
-                    : { duration: 0.6, ease: easeOutSoft }
-                }
-              >
-                <FilmBox part="back" width={box} open={flapsOpen} label={label} />
-
-                {/* The fan: a 3D layer that leans towards the pointer */}
-                <div
+            {verified && (
+              <>
+                {/* BRAND CAPTION — below the box, clear of the fan */}
+                <motion.div
                   aria-hidden="true"
-                  className="pointer-events-none absolute left-1/2 top-1/2"
-                  style={{ perspective: box * 4.5 }}
+                  className="pointer-events-none absolute inset-x-0 flex flex-col items-center gap-2 px-4 text-center"
+                  style={{ top: `calc(50% + ${box * 0.62}px)` }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: zooming ? 0 : 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: zooming ? 0 : 0.3 }}
                 >
-                  <motion.div
-                    className="absolute left-0 top-0"
-                    style={{
-                      transformStyle: "preserve-3d",
-                      rotateX: reduceMotion ? 0 : fanRotateX,
-                      rotateY: reduceMotion ? 0 : fanRotateY,
-                    }}
-                  >
-                    {cards.map((src, i) => (
-                      <FanCard
-                        key={`${i}-${src}`}
-                        src={src}
-                        index={i}
-                        count={cards.length}
-                        slot={fan.slots[i]}
-                        card={fan.card}
-                        riseY={fan.riseY}
-                        insideY={fan.insideY}
-                        state={cardState}
-                        focused={activeCard === i}
-                        dimmed={activeCard !== null && activeCard !== i}
-                        float={!reduceMotion}
-                        onFocusCard={setFocusCard}
-                      />
-                    ))}
-                  </motion.div>
-                </div>
+                  <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.3em] text-foreground sm:text-xs sm:tracking-[0.5em]">
+                    {BRAND} {BRAND_SUFFIX}
+                  </span>
+                  <span className="whitespace-nowrap text-[9px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.3em]">
+                    {touch
+                      ? `Tap the box to ${label.toLowerCase()}`
+                      : `Hover to preview · Click to ${label.toLowerCase()}`}
+                  </span>
+                </motion.div>
 
-                <FilmBox part="front" width={box} open={flapsOpen} label={label} />
-              </motion.button>
-            </div>
+                {/* HOVER ZONE — a still element, so the box lifting on hover can't
+                    pull itself out from under the pointer. The cards are inside it,
+                    so pointing at them keeps the preview open. */}
+                <div
+                  className="relative z-20"
+                  style={{ width: box, height: box * 0.7 }}
+                  onPointerEnter={hoverStart}
+                  onPointerLeave={hoverEnd}
+                >
+                  {/* While the fan is open, an arch over it keeps the preview open in
+                      the gap between the box and the cards. Hit-testing follows the
+                      rounded corners, so the empty corners of the screen don't count. */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute"
+                    style={{
+                      left: box / 2 - reach.side,
+                      width: reach.side * 2,
+                      top: box * 0.35 + reach.top,
+                      height: box * 0.35 - reach.top,
+                      borderRadius: "50% 50% 0 0 / 70% 70% 0 0",
+                      pointerEvents: flapsOpen ? "auto" : "none",
+                    }}
+                  />
+
+                  {/* Contact shadow: grounds the box, shrinks as it lifts */}
+                  <motion.div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-1/2 rounded-[50%]"
+                    style={{
+                      width: box * 1.15,
+                      height: box * 0.2,
+                      marginLeft: -box * 0.575,
+                      bottom: -box * 0.16,
+                      background:
+                        "radial-gradient(closest-side, color-mix(in oklch, black 60%, transparent), transparent)",
+                      filter: "blur(8px)",
+                    }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: zooming ? 0 : flapsOpen ? 0.55 : 0.85, scale: flapsOpen ? 0.88 : 1 }}
+                    transition={{ duration: 0.6, ease: easeOutSoft }}
+                  />
+
+                  {/* FILM BOX — back half, cards, front half. The cards sit
+                      between the halves, so they start INSIDE the box (hidden by
+                      its front walls) and rise out of the opening. */}
+                  <motion.button
+                    type="button"
+                    aria-label={`${label} ${BRAND} ${BRAND_SUFFIX}`}
+                    onClick={enter}
+                    onFocus={() => setPreview(true)}
+                    onBlur={() => {
+                      if (!touch) setPreview(false);
+                    }}
+                    disabled={stage !== "idle"}
+                    className="relative cursor-pointer border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-8 focus-visible:ring-offset-background"
+                    style={{ width: box, height: box * 0.7 }}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={
+                      zooming
+                        ? { opacity: 0, y: 0, scale: zoomScale * 0.5 }
+                        : { opacity: 1, y: flapsOpen ? -4 : 0, scale: 1 }
+                    }
+                    transition={
+                      zooming
+                        ? {
+                            scale: zoomTransition,
+                            opacity: { duration: 0.6, ease: "easeIn" },
+                          }
+                        : { duration: 0.6, ease: easeOutSoft }
+                    }
+                  >
+                    <FilmBox part="back" width={box} open={flapsOpen} label={label} />
+
+                    {/* The fan: a 3D layer that leans towards the pointer */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-1/2 top-1/2"
+                      style={{ perspective: box * 4.5 }}
+                    >
+                      <motion.div
+                        className="absolute left-0 top-0"
+                        style={{
+                          transformStyle: "preserve-3d",
+                          rotateX: reduceMotion ? 0 : fanRotateX,
+                          rotateY: reduceMotion ? 0 : fanRotateY,
+                        }}
+                      >
+                        {cards.map((src, i) => (
+                          <FanCard
+                            key={`${i}-${src}`}
+                            src={src}
+                            index={i}
+                            count={cards.length}
+                            slot={fan.slots[i]}
+                            card={fan.card}
+                            riseY={fan.riseY}
+                            insideY={fan.insideY}
+                            state={cardState}
+                            focused={activeCard === i}
+                            dimmed={activeCard !== null && activeCard !== i}
+                            float={!reduceMotion}
+                            onFocusCard={setFocusCard}
+                          />
+                        ))}
+                      </motion.div>
+                    </div>
+
+                    <FilmBox part="front" width={box} open={flapsOpen} label={label} />
+                  </motion.button>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* AGE CHECK                                                           */
+/* ------------------------------------------------------------------ */
+
+const ageList: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.2 } },
+};
+
+const ageItem: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: easeOutSoft } },
+};
+
+/** The brand title stutters on like a projector warming up */
+const ageFlicker: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: [0, 1, 0.25, 1, 0.6, 1],
+    transition: { duration: 1, times: [0, 0.15, 0.25, 0.4, 0.5, 1], ease: "linear" },
+  },
+};
+
+/**
+ * NIGHT O'CLOCK STUDIOS · Enter after dark. · [ I'm 18+ ] [ Leave ]
+ * Sits where the box will be. "I'm 18+" fades it out and brings the box in.
+ */
+function AgeCheck({
+  tagline,
+  flicker,
+  onConfirm,
+  onLeave,
+}: {
+  tagline: string;
+  flicker: boolean;
+  onConfirm: () => void;
+  onLeave: () => void;
+}) {
+  const [leaving, setLeaving] = useState(false);
+
+  return (
+    <motion.div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="age-check-title"
+      aria-describedby="age-check-desc"
+      className="absolute inset-0 z-30 flex items-center justify-center px-6"
+      variants={ageList}
+      initial="hidden"
+      animate="show"
+      exit={{
+        opacity: 0,
+        scale: 0.96,
+        filter: "blur(6px)",
+        transition: { duration: 0.4, ease: "easeIn" },
+      }}
+    >
+      <div className="flex w-full max-w-sm flex-col items-center text-center">
+        <motion.div variants={ageItem}>
+          <MoonClockMark size={40} />
+        </motion.div>
+
+        <motion.h1
+          id="age-check-title"
+          variants={flicker ? ageFlicker : ageItem}
+          className="mt-5 flex flex-col items-center leading-none text-foreground"
+        >
+          <span className="text-2xl font-black uppercase tracking-[0.06em] sm:text-3xl">
+            {BRAND}
+          </span>
+          <span className="mt-2 text-[10px] font-medium uppercase tracking-[0.6em] text-muted-foreground sm:text-xs">
+            {BRAND_SUFFIX}
+          </span>
+        </motion.h1>
+
+        {/* Clapper stripe divider */}
+        <motion.div
+          aria-hidden="true"
+          variants={ageItem}
+          className="mt-6 h-1.5 w-24 rounded-[1px]"
+          style={{ background: clapper(4) }}
+        />
+
+        <motion.p
+          variants={ageItem}
+          className="mt-6 text-base italic text-foreground sm:text-lg"
+        >
+          {leaving ? "See you after dark." : tagline}
+        </motion.p>
+
+        <motion.p
+          id="age-check-desc"
+          variants={ageItem}
+          className="mt-2 text-xs text-muted-foreground"
+        >
+          This site is for adults only. Please confirm you are 18 or older.
+        </motion.p>
+
+        <motion.div
+          variants={ageItem}
+          className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:justify-center"
+        >
+          <button
+            type="button"
+            autoFocus
+            disabled={leaving}
+            onClick={onConfirm}
+            className="h-11 cursor-pointer rounded-md bg-foreground px-7 text-xs font-semibold uppercase tracking-[0.25em] text-background transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:opacity-40"
+          >
+            I&rsquo;m 18+
+          </button>
+          <button
+            type="button"
+            disabled={leaving}
+            onClick={() => {
+              setLeaving(true);
+              onLeave();
+            }}
+            className="h-11 cursor-pointer rounded-md border border-border bg-transparent px-7 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:opacity-40"
+          >
+            {leaving ? "Leaving…" : "Leave"}
+          </button>
+        </motion.div>
+
+        <motion.p
+          variants={ageItem}
+          className="mt-6 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70"
+        >
+          By entering you confirm you are of legal age where you live
+        </motion.p>
+      </div>
+    </motion.div>
   );
 }
 

@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Display faces from fonts/universes.ts
+enum ComicDisplay {
+  stencil
+  western
+  astroz
+  morris
+  garamond
+}
+
+/// A comic (a "universe" on the site). Shaped after `Universe` in config/universes.
+/// Characters and campaigns link to it by `slug`; gallery images live in ComicGalleryImage.
+/// The small fixed groups (palette, direction, hero, story, face, cta) are JSON so the API
+/// can hand them back in exactly the shape config/universes uses. lib/comics/schema.ts validates them.
+model Comic {
+  id        String       @id @default(cuid())
+  /// URL of the comic's page, e.g. "venom-vixens" for /venom-vixens
+  slug      String       @unique
+  name      String
+  /// Sits above the name, e.g. "The Kat Chronicle"
+  overline  String?
+  /// Short label for the nav and cards
+  shortName String
+  genre     String
+  hook      String
+  /// Slug of a world in config/worlds, e.g. "spy-files". Null = not placed in a world yet.
+  worldSlug String?
+  display   ComicDisplay @default(stencil)
+
+  /// { ink, paper, accent, accentSoft }: ink is the page ground, paper the text on it
+  palette    Json
+  /// { type, motion, cursor, reveal, gallery }: design-direction notes
+  direction  Json
+  /// { poster, videoNote, video? }
+  hero       Json
+  /// { headline, text, more?, image? }
+  story      Json
+  /// { name, tag, bio, href, image } or null when the comic has no collaborator
+  face       Json?
+  /// { headline, buttons: [{ label, href }] }
+  cta        Json
+  signupLine String
+
+  galleryTitle  String
+  galleryNote   String?
+  galleryImages ComicGalleryImage[]
+
+  characters CharacterComic[]
+  campaigns  Campaign[]
+
+  /// Hidden comics stay out of the public site
+  published Boolean @default(true)
+  /// Lower comes first
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([worldSlug, sortOrder])
+}
+
+model ComicGalleryImage {
+  id        String @id @default(cuid())
+  comicId   String
+  comic     Comic  @relation(fields: [comicId], references: [id], onDelete: Cascade)
+  src       String
+  caption   String
+  /// Lower comes first
+  sortOrder Int    @default(0)
+
+  @@index([comicId, sortOrder])
+}
+
+/// Where a campaign is in its life. Only LIVE campaigns show in the home page section.
+enum CampaignStatus {
+  DRAFT
+  UPCOMING
+  LIVE
+  FUNDED
+  ENDED
+}
+
+/// A Kickstarter campaign. Shaped after the `Campaign` card in components/home/LiveCampaigns.
+/// `funded` (percent) and `daysLeft` are worked out from the numbers below, not stored.
+model Campaign {
+  id          String         @id @default(cuid())
+  title       String
+  /// Short line under the title
+  description String
+  /// Still shown on the card
+  image       String
+  status      CampaignStatus @default(DRAFT)
+
+  /// Whole dollars, e.g. 10895
+  raised  Int @default(0)
+  /// Whole dollars, e.g. 2000
+  goal    Int
+  backers Int @default(0)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  buttonLabel String
+  buttonHref  String
+
+  /// Optional link to a comic by slug, e.g. "venom-vixens". Deleting the comic leaves the campaign unlinked.
+  universeSlug String?
+  comic        Comic?  @relation(fields: [universeSlug], references: [slug], onDelete: SetNull, onUpdate: Cascade)
+  /// Lower comes first
+  sortOrder    Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, sortOrder])
+}
+
+/// A character. Shaped after `Character` in config/universes.
+/// One character can appear in several comics (e.g. Kat in Agent Scarlett and The Silk Sting).
+model Character {
+  id        String  @id @default(cuid())
+  name      String
+  /// Codename printed above the bio, where the comic uses one
+  alias     String?
+  /// Bio
+  copy      String
+  power     String?
+  role      String
+  image     String
+  /// Lower comes first
+  sortOrder Int     @default(0)
+
+  comics CharacterComic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Which comics a character belongs to. Linked by the comic's slug, so renaming a slug carries over.
+model CharacterComic {
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  /// e.g. "silk-sting"
+  comicSlug   String
+  comic       Comic     @relation(fields: [comicSlug], references: [slug], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([characterId, comicSlug])
+  @@index([comicSlug])
+}
+
+/// A backer's comment. Shaped after `Testimonial` in components/home/BackersSection.
+model BackerTestimonial {
+  id        String  @id @default(cuid())
+  quote     String
+  /// Backer's name as they're happy to be shown
+  name      String
+  /// What they backed, shown as "Backed <campaign>", e.g. "Agent Scarlett #1"
+  campaign  String
+  /// Optional screenshot or artwork
+  image     String?
+  /// Only published testimonials show on the home page
+  published Boolean @default(true)
+  /// Lower comes first
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, sortOrder])
+}
+
+/// Topics on the contact form (components/contact/ContactIntro)
+enum ContactTopic {
+  PRESS
+  LICENSING
+  WHOLESALE
+  ORDERS
+  OTHER
+}
+
+/// Where a contact request is in the admin inbox
+enum ContactStatus {
+  NEW
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+/// A message sent from the contact page
+model ContactRequest {
+  id      String        @id @default(cuid())
+  name    String
+  email   String
+  topic   ContactTopic
+  message String
+  status  ContactStatus @default(NEW)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}

@@ -12,10 +12,13 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
 import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import type { CampaignDTO } from '@/lib/campaigns/types';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
 export type Campaign = {
+  id: string;
   title: string;
   /** Short line under the title */
   description: string;
@@ -25,48 +28,25 @@ export type Campaign = {
   /** Amount raised so far, already formatted, e.g. "1.2M" */
   raised: string;
   backers: number;
-  daysLeft: number;
+  /** null when the campaign has no end date */
+  daysLeft: number | null;
   button: { label: string; href: string };
 };
 
-const still = (seed: string) => `https://picsum.photos/seed/${seed}/1200/800`;
+const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
-/* Placeholder copy: swap in your real campaigns */
-const defaultCampaigns: Campaign[] = [
-  {
-    title: 'The Oracle — Deluxe',
-    description:
-      'The first prequel novel in a foiled slipcase, packaged with a signed art print and an expanded lore appendix from the creator.',
-    image: still('campaign-oracle'),
-    funded: 412,
-    raised: '1.2M',
-    backers: 8420,
-    daysLeft: 11,
-    button: { label: 'Back the Oracle', href: '/campaigns/the-oracle' },
-  },
-  {
-    title: 'Huxley — Collector Set',
-    description:
-      'All six issues of the original graphic novel plus the art book, boxed together in a numbered run of 500.',
-    image: still('campaign-collector-set'),
-    funded: 186,
-    raised: '640K',
-    backers: 3105,
-    daysLeft: 23,
-    button: { label: 'Back the set', href: '/campaigns/collector-set' },
-  },
-  {
-    title: 'Ronin — Art Book',
-    description:
-      'Two hundred pages of concept art, vehicle studies and unused designs from the empire era, printed oversized on uncoated stock.',
-    image: still('campaign-ronin-art'),
-    funded: 94,
-    raised: '310K',
-    backers: 1870,
-    daysLeft: 6,
-    button: { label: 'Back the art book', href: '/campaigns/ronin-art-book' },
-  },
-];
+/** API campaign → card props */
+const toCard = (c: CampaignDTO): Campaign => ({
+  id: c.id,
+  title: c.title,
+  description: c.description,
+  image: c.image,
+  funded: c.funded,
+  raised: compact.format(c.raised),
+  backers: c.backers,
+  daysLeft: c.daysLeft,
+  button: { label: c.buttonLabel, href: c.buttonHref },
+});
 
 /** Label above value, in the same muted-key rhythm as the product cards */
 function Stat({ label, children }: { label: string; children: ReactNode }) {
@@ -97,9 +77,11 @@ function CampaignCard({ campaign, className = 'w-full md:w-[min(86vw,480px)]' }:
             Live
           </div>
 
-          <span className="absolute right-3 top-3 border border-white/20 bg-black/70 px-2 py-1 text-[10px] tracking-widest backdrop-blur-sm sm:text-[11px]">
-            {campaign.daysLeft}D Left
-          </span>
+          {campaign.daysLeft !== null && (
+            <span className="absolute right-3 top-3 border border-white/20 bg-black/70 px-2 py-1 text-[10px] tracking-widest backdrop-blur-sm sm:text-[11px]">
+              {campaign.daysLeft}D Left
+            </span>
+          )}
         </div>
 
         <div className="flex flex-1 flex-col p-3.5">
@@ -134,7 +116,7 @@ function CampaignCard({ campaign, className = 'w-full md:w-[min(86vw,480px)]' }:
             <Stat label="Backers">
               <RollingNumber value={campaign.backers} delay={200} />
             </Stat>
-            <Stat label="Ends in">{campaign.daysLeft} Days</Stat>
+            <Stat label="Ends in">{campaign.daysLeft === null ? '—' : `${campaign.daysLeft} Days`}</Stat>
           </div>
 
           <div className="mt-5 -ml-1">
@@ -170,7 +152,7 @@ function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
       >
         {campaigns.map((campaign) => (
           /* Swiper sets the slide to full width; *:w-full stretches whatever wraps the card; h-auto + flex keeps heights equal */
-          <SwiperSlide key={campaign.title} className="flex! h-auto! *:w-full">
+          <SwiperSlide key={campaign.id} className="flex! h-auto! *:w-full">
             <CampaignCard campaign={campaign} />
           </SwiperSlide>
         ))}
@@ -180,7 +162,7 @@ function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
       <div className="mt-2 flex">
         {campaigns.map((campaign, i) => (
           <button
-            key={campaign.title}
+            key={campaign.id}
             type="button"
             aria-label={`Show ${campaign.title}`}
             aria-current={i === active}
@@ -205,18 +187,24 @@ function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
 export default function LiveCampaigns({
   title = 'Live Campaigns',
   /* Placeholder copy: swap in your real text */
-  text = 'Three campaigns are funding right now. Back one to help bring the next chapter of the saga into print and claim an edition before it closes.',
-  campaigns = defaultCampaigns,
+  text = 'Three campaigns are live right now, each bringing a new story to life. Back your favourite, help turn ink and imagination into something real, and claim your edition before the final page turns.',
+  campaigns: campaignsProp,
 }: {
   title?: string;
   text?: string;
+  /** Pass campaigns to skip fetching; otherwise the LIVE ones come from /api/campaigns */
   campaigns?: Campaign[];
 }) {
   const reduceMotion = useReducedMotion();
+  const { campaigns: live, isLoading } = useCampaigns(campaignsProp ? null : { status: 'LIVE' });
+  const campaigns = campaignsProp ?? live.map(toCard);
+
+  /* Nothing live (or still loading): leave the section out rather than show an empty row */
+  if (!campaignsProp && (isLoading || campaigns.length === 0)) return null;
 
   return (
-    <section className="overflow-hidden px-3 pb-10 pt-20 uppercase">
-      <SectionIntro title={title} text={text} aside={`[${String(campaigns.length).padStart(2, '0')}]`} />
+    <section className="overflow-hidden px-3 py-10 uppercase">
+      <SectionIntro title={title} text={text} />
 
       <motion.p
         initial="hidden"
@@ -242,7 +230,7 @@ export default function LiveCampaigns({
 
         <Marquee className="-mx-3 max-md:hidden">
           {campaigns.map((campaign) => (
-            <CampaignCard key={campaign.title} campaign={campaign} />
+            <CampaignCard key={campaign.id} campaign={campaign} />
           ))}
         </Marquee>
       </motion.div>

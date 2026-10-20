@@ -5,6 +5,7 @@ import { universeFontVariables } from '@/fonts/universes';
 import Providers from '@/components/providers';
 import { SITE_NAME } from '@/config';
 import './globals.css';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: SITE_NAME,
@@ -21,6 +22,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
+        <Toaster richColors/>
         <Providers>{children}</Providers>
       </body>
     </html>

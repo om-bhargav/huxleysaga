@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from "react"
-import LenisProvider from "./LenisProvider";
 import { ThemeProvider } from "./ThemeProvider";
+import SwrProvider from "./SwrProvider";
 interface Props extends PropsWithChildren { }
 export default function Providers({ children }: Props) {
     return <ThemeProvider attribute="class"
@@ -9,7 +9,6 @@ export default function Providers({ children }: Props) {
         disableTransitionOnChange
         forcedTheme="dark"
     >
-        <LenisProvider />
-        {children}
+        <SwrProvider>{children}</SwrProvider>
     </ThemeProvider>
 }

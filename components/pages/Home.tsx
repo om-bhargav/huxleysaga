@@ -1,8 +1,10 @@
+import BackersSection from "../home/BackersSection";
 import Eight from "../home/Eight";
 import Eleven from "../home/Eleven";
 import Fifth from "../home/Fifth";
 import Hero from "../home/Hero";
 import LiveCampaigns from "../home/LiveCampaigns";
+import MeetTheUniverse from "../home/MeetTheUniverse";
 import Ninth from "../home/Ninth";
 import SagaIntro from "../home/SagaIntro";
 import Second from "../home/Second";
@@ -10,23 +12,27 @@ import Seventh from "../home/Seventh";
 import Sixth from "../home/Sixth";
 import Tenth from "../home/Tenth";
 import Third from "../home/Third";
+import FinalCta from "../shared/FinalCTA";
 
 export default function Home() {
   return (
     <div className="grid gap-5">
-      <Hero /> {/* ✅ */}
+      <Hero video="/assets/hero.mp4" /> {/* ✅ */}
       <div className="relative z-10 grid gap-5 bg-background">
         <LiveCampaigns />
         <SagaIntro/>
         <Second />
         <Third />{/* ✅ */}
-        <Fifth />{/* ✅ */}
-        <Sixth />{/* ✅ */}
-        <Seventh />{/* ✅ */}
+        <MeetTheUniverse/>
+        {/* <Fifth />✅ */}
+        {/* <Sixth />✅ */}
+        {/* <Seventh />✅ */}
         <Eight />{/* ✅ */}
-        <Ninth />{/* ✅ */}
-        <Tenth />{/* ✅ */}
-        <Eleven />{/* ✅ */}
+        <BackersSection/>
+        {/* <Ninth />✅ */}
+        {/* <Tenth />✅ */}
+        {/* <Eleven />✅ */}
+        <FinalCta images={["/assets/poster-1.png","/assets/poster-2.png","/assets/poster-3.png","/assets/poster-4.png"]}/>
       </div>
     </div>
   )

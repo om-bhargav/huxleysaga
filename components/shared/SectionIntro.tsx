@@ -40,7 +40,7 @@ export function SectionIntro({ title, text, aside, titleClassName = '', classNam
         viewport={{ once: true, amount: 0.4 }}
         className="mt-4 max-w-[70%] text-[clamp(1.125rem,1.6vw,1.75rem)] leading-[1.1] tracking-wide max-lg:max-w-none"
       >
-        <motion.h2 variants={flicker} custom={0} className={`flex items-center gap-3 text-white ${titleClassName}`}>
+        <motion.h2 variants={flicker} custom={0} className={`flex uppercase items-center gap-3 text-white ${titleClassName}`}>
           {title}
           {aside && <span className="text-white/40">{aside}</span>}
         </motion.h2>

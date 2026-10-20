@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from 'framer-motion';
 import { Divider } from '@/components/shared/Divider'; // adjust path
+import { SITE_NAME } from '@/config';
 
 type SagaIntroProps = {
   title?: string;
@@ -22,14 +23,14 @@ const wordDelay = (i: number) => 0.2 + i * 0.03 + ((i * 37) % 5) * 0.04;
 
 /** Title + large grey paragraph. The words flicker in when scrolled into view. */
 export default function SagaIntro({
-  title = 'The Huxley® Saga',
+  title = `The ${SITE_NAME}`,
   /* Placeholder copy: swap in your real text */
-  text = "An original sci-fi universe from concept artist Ben Mauro. It began with the graphic novel 'Huxley' and carries on through a growing series of prequel novels.",
+  text = "Night O’Clock Studios is a collective of artists and storytellers building six unique comic universes. Each world has its own characters, stories and style, made to get lost in. Hand-drawn. Always.",
 }: SagaIntroProps) {
   const words = text.split(' ');
 
   return (
-    <section className="px-3 pb-24 pt-20 uppercase">
+    <section className="px-3 py-5 uppercase">
       <Divider />
 
       <motion.div

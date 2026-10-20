@@ -15,6 +15,7 @@ type FrameButtonProps = {
   className?: string;
   /** Color class for the four corner brackets */
   cornerClassName?: string;
+  type?: "button" | "submit" | "reset" | undefined;
 };
 
 /* Background + border flickers like a failing light, then settles brighter */
@@ -59,6 +60,7 @@ export function FrameButton({
   disabled = false,
   className = '',
   cornerClassName = 'bg-foreground',
+  type = "button"
 }: FrameButtonProps) {
   const inner = (
     <>
@@ -85,7 +87,7 @@ export function FrameButton({
         </Link>
       ) : (
         <button
-          type="button"
+          type={type}
           onClick={onClick}
           disabled={disabled}
           className={`${base} disabled:cursor-not-allowed`}

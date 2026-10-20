@@ -8,7 +8,6 @@
 
 export type Character = {
   name: string;
-  /** Codename printed above the bio, where the universe uses one */
   alias?: string;
   copy: string;
   power?: string;

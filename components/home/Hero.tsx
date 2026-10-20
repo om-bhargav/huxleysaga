@@ -16,9 +16,10 @@ type HeroProps = {
   video?: string;
   tagline?: string;
 };
-const word = SITE_NAME;
-/* Letter positions (1 = H ... 6 = Y) in the order they appear: H, E, U, Y, L, X */
-const revealOrder = [3, 10, 1, 7, 13, 4, 11, 2, 9, 5, 12, 8, 6];
+const word = "SIX WORLDS. ONE STUDIO";
+/* Character positions (1 = S ... 22 = o), in the order they appear.
+   Spaces (4, 12, 16) go last so they don't add empty gaps to the reveal. */
+const revealOrder = [8, 18, 3, 14, 21, 6, 1, 10, 19, 13, 5, 22, 9, 2, 17, 15, 7, 20, 11, 4, 12, 16];
 /**
  * Full-screen hero fixed behind the page, like a reveal footer but at the top.
  * It reserves its own space with a spacer, so the page scrolls normally,
@@ -76,11 +77,11 @@ export default function Hero({
 
         {/* Content */}
         <div className="relative flex h-full flex-col justify-between px-4 pb-5 pt-2.5">
-          <h1 className="sr-only">{SITE_NAME}</h1>
+          <h1 className="sr-only">{"Six Worlds. One Studio"}</h1>
 
           {/* Wordmark rises in on load */}
           <div aria-hidden="true">
-            <StretchText className="font-heading text-[14vw] leading-[0.78]">
+            <StretchText className="font-heading text-[10vw] leading-[0.78]">
               {Array.from(word).map((char, i) => (
                 <motion.span
                   key={i}
