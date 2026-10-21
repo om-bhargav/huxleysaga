@@ -23,11 +23,11 @@ export default function Home() {
         <SagaIntro/>
         <Second />
         <Third />{/* ✅ */}
-        <MeetTheUniverse/>
+        {/* <MeetTheUniverse/> */}
         {/* <Fifth />✅ */}
         {/* <Sixth />✅ */}
         {/* <Seventh />✅ */}
-        <Eight />{/* ✅ */}
+        <Eight />✅
         <BackersSection/>
         {/* <Ninth />✅ */}
         {/* <Tenth />✅ */}

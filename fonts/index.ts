@@ -24,6 +24,21 @@ export const candyCane = localFont({
   ],
 });
 
+export const rooster = localFont({
+  src: [
+    { path: './sources/rooster.ttf', weight: '300', style: 'normal' },
+    { path: './sources/rooster.ttf', weight: '400', style: 'normal' },
+    { path: './sources/rooster.ttf', weight: '700', style: 'normal' },
+  ],
+  variable: '--font-rooster',
+  display: 'swap',
+  fallback: ['sans-serif'],
+  adjustFontFallback: false,
+  declarations: [
+    // space, A–Z, a–z (digits fall back to sans-serif)
+    { prop: 'unicode-range', value: 'U+0020, U+0041-005A, U+0061-007A' },
+  ],
+});
 export const timesNewRoman = localFont({
   src: './sources/times.ttf',
   variable: '--font-times-new-roman',

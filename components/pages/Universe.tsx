@@ -20,4 +20,4 @@ export default function Universe({ universe }: { universe: UniverseData }) {
       </div>
     </UniverseTheme>
   );
-}
+} 

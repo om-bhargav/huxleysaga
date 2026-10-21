@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { nbArchitekt, timesNewRoman,candyCane } from '@/fonts';
+import { nbArchitekt, timesNewRoman,candyCane,rooster } from '@/fonts';
 import { universeFontVariables } from '@/fonts/universes';
 import Providers from '@/components/providers';
 import { SITE_NAME } from '@/config';
@@ -18,7 +18,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${nbArchitekt.variable} ${timesNewRoman.variable} ${candyCane.variable} ${universeFontVariables} h-full antialiased`}
+      className={`${nbArchitekt.variable} ${timesNewRoman.variable} ${candyCane.variable} ${universeFontVariables} ${rooster.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
