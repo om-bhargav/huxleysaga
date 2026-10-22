@@ -67,7 +67,7 @@ export default function FeatureSection({ image, title, description, button, id }
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.5 }}
-          className="relative -mt-[10vh] flex max-w-[640px] flex-col items-center text-center"
+          className="relative mt-[-10vh] flex max-w-3xl flex-col items-center text-center"
         >
           <Tick />
 

@@ -81,7 +81,7 @@ export default function Hero({
 
           {/* Wordmark rises in on load */}
           <div aria-hidden="true">
-            <StretchText className="font-heading text-[10vw] leading-[0.78]">
+            <StretchText className="font-heading text-[9vw] leading-[0.78]">
               {Array.from(word).map((char, i) => (
                 <motion.span
                   key={i}

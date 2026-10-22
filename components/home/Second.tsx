@@ -80,7 +80,7 @@ function Panel({ item, index, total }: { item: ShowcaseItem; index: number; tota
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.5 }}
-          className="absolute bottom-0 left-0 max-w-[440px] px-4 pb-10"
+          className="absolute bottom-0 left-0 max-w-3xl px-4 pb-10"
         >
           <motion.span variants={flicker} custom={0} aria-hidden="true" className="block size-1 bg-white" />
           <motion.h2 variants={flicker} custom={0.1} className="mt-3 text-[clamp(2.5rem,5vw,5rem)] leading-none">
