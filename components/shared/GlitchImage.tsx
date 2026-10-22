@@ -126,6 +126,7 @@ function Cover({
       src={src}
       alt={alt}
       fill
+      unoptimized
       priority={priority}
       loading={priority ? undefined : eager ? 'eager' : undefined}
       sizes={sizes}

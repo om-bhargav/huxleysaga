@@ -1,16 +1,9 @@
 import BackersSection from "../home/BackersSection";
 import Eight from "../home/Eight";
-import Eleven from "../home/Eleven";
-import Fifth from "../home/Fifth";
 import Hero from "../home/Hero";
 import LiveCampaigns from "../home/LiveCampaigns";
-import MeetTheUniverse from "../home/MeetTheUniverse";
-import Ninth from "../home/Ninth";
 import SagaIntro from "../home/SagaIntro";
 import Second from "../home/Second";
-import Seventh from "../home/Seventh";
-import Sixth from "../home/Sixth";
-import Tenth from "../home/Tenth";
 import Third from "../home/Third";
 import FinalCta from "../shared/FinalCTA";
 

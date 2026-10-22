@@ -23,7 +23,7 @@ const wordDelay = (i: number) => 0.2 + i * 0.03 + ((i * 37) % 5) * 0.04;
 
 /** Title + large grey paragraph. The words flicker in when scrolled into view. */
 export default function SagaIntro({
-  title = `The ${SITE_NAME}`,
+  title = `About ${SITE_NAME}`,
   /* Placeholder copy: swap in your real text */
   text = "Night O’Clock Studios is a collective of artists and storytellers building six unique comic universes. Each world has its own characters, stories and style, made to get lost in. Hand-drawn. Always.",
 }: SagaIntroProps) {

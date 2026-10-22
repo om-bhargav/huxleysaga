@@ -16,15 +16,35 @@ type HeroProps = {
   video?: string;
   tagline?: string;
 };
-const word = "SIX WORLDS. ONE STUDIO";
-/* Character positions (1 = S ... 22 = o), in the order they appear.
-   Spaces (4, 12, 16) go last so they don't add empty gaps to the reveal. */
-const revealOrder = [8, 18, 3, 14, 21, 6, 1, 10, 19, 13, 5, 22, 9, 2, 17, 15, 7, 20, 11, 4, 12, 16];
-/**
- * Full-screen hero fixed behind the page, like a reveal footer but at the top.
- * It reserves its own space with a spacer, so the page scrolls normally,
- * and the content after it slides up over it.
- */
+const word = SITE_NAME.toUpperCase();
+
+/* 1-based character positions in reveal order.
+   Letters are shuffled with a fixed seed, so the order is identical on server
+   and client (no hydration mismatch). Spaces go last so they don't add empty gaps. */
+const revealOrder = (() => {
+  const letters: number[] = [];
+  const spaces: number[] = [];
+  [...word].forEach((ch, i) => (ch === ' ' ? spaces : letters).push(i + 1));
+
+  // Seeded PRNG (mulberry32), seeded from the word itself
+  let seed = [...word].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const rand = () => {
+    seed = (seed + 0x6d2b79f5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  // Fisher–Yates shuffle of the letter positions
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+
+  return [...letters, ...spaces];
+})();
+
 export default function Hero({
   image = HOME_HERO_IMAGE,
   video,
@@ -81,7 +101,7 @@ export default function Hero({
 
           {/* Wordmark rises in on load */}
           <div aria-hidden="true">
-            <StretchText className="font-heading text-[9vw] leading-[0.78]">
+            <StretchText className="font-heading text-[11vw] leading-[0.8]">
               {Array.from(word).map((char, i) => (
                 <motion.span
                   key={i}

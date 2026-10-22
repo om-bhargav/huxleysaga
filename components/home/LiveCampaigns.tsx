@@ -86,7 +86,7 @@ function CampaignCard({ campaign, className = 'w-full md:w-[min(86vw,480px)]' }:
 
         <div className="flex flex-1 flex-col p-3.5">
           <h3 className="text-lg tracking-wide lg:text-xl">{campaign.title}</h3>
-          <p className="mt-2 line-clamp-2 text-xs leading-relaxed tracking-wider text-white/40 sm:text-sm">
+          <p className="mt-2 flex-1 line-clamp-2 text-xs leading-relaxed tracking-wider text-white/40 sm:text-sm">
             {campaign.description}
           </p>
 

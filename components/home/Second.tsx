@@ -30,10 +30,10 @@ const descriptions: Record<string, string> = {
     'Enter a realm of legendary heroes, ancient magic, and twisted tournaments. In Fantasy Land, every battle is a test, and fate is never in your own hands.',
 };
 
-const defaultItems: ShowcaseItem[] = worlds.map((world) => ({
+const defaultItems: ShowcaseItem[] = worlds.map((world,idx) => ({
   title: world.label,
   description: descriptions[world.slug] ?? world.line,
-  image: picsum(`universe-${world.slug}`),
+  image: `/assets/poster-${idx + 1}.png`,
   button: { label: `Explore ${world.label}`, href: `/universes/${world.slug}` },
 }));
 /* Blinks on like a bad signal */
