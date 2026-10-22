@@ -10,7 +10,7 @@ import FinalCta from "../shared/FinalCTA";
 export default function Home() {
   return (
     <div className="grid gap-5">
-      <Hero video="/assets/hero.mp4" /> {/* ✅ */}
+      <Hero video="/assets/hero.mp4" image="/assets/video-poster.png" /> {/* ✅ */}
       <div className="relative z-10 grid gap-5 bg-background">
         <LiveCampaigns />
         <SagaIntro/>
