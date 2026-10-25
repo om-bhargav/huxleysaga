@@ -3,19 +3,16 @@
 import { motion } from 'framer-motion';
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
 import { flicker } from '@/components/shared/SectionIntro'; // adjust path
-import { UNIVERSES_BANNER } from '@/lib/assets';
 import { SITE_NAME } from '@/config';
-
-/* Set in lib/assets, so the loader fetches it up front */
-const banner = UNIVERSES_BANNER;
+import { worlds } from '@/config/worlds'; // adjust path
 
 /* Placeholder facts: swap in your real numbers */
 const meta: { label: string; value: string; href?: string }[] = [
-  { label: 'Universes', value: '04' },
+  { label: 'Universes', value: String(worlds.length).padStart(2, '0') },
   { label: 'Since', value: '2014' },
 ];
 
-/** Opening plate for the all-universes page: banner, title, the key facts, and a jump to the list. */
+/** Opening plate for the all-universes page: one panel per world, title, the key facts, and a jump to the list. */
 export default function UniversesHero() {
   return (
     <section className="bg-black font-heading uppercase">
@@ -25,23 +22,28 @@ export default function UniversesHero() {
         svh = the visible height with mobile browser bars showing, so nothing hides behind them.
       */}
       <div className="relative flex w-full flex-col justify-end border border-white/10 max-md:h-[80vh] md:min-h-svh">
-        {/* Above the fold, so it plays on load instead of waiting to be scrolled into view */}
-        <div className="absolute inset-0">
-          <RevealImage
-            src={banner}
-            alt=""
-            direction="bottom-up"
-            trigger="mount"
-            priority
-            sizes="100vw"
-            className="size-full"
-          >
-            {/* Heavier at the bottom so the text stays readable; heavier still on phones, where text covers more */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-linear-to-t from-black/90 via-black/50 to-black/20 sm:from-black/80 sm:via-black/40"
-            />
-          </RevealImage>
+        {/* One panel per world (2×2 on phones, a row of four from tablet up), wiping in one after another */}
+        <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-white/10 md:grid-cols-4 md:grid-rows-1">
+          {worlds.map((world, i) => (
+            <div key={world.slug} className="relative min-w-0 bg-black">
+              <RevealImage
+                src={world.image}
+                alt=""
+                direction="bottom-up"
+                trigger="mount"
+                delay={i * 0.12}
+                priority
+                sizes="(min-width: 768px) 25vw, 50vw"
+                className="size-full [&_img]:!h-full [&_img]:!w-full [&_img]:object-cover [&_img]:object-top"
+              >
+                {/* Heavier at the bottom so the text stays readable; heavier still on phones, where text covers more */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-linear-to-t from-black/90 via-black/50 to-black/20 sm:from-black/80 sm:via-black/40"
+                />
+              </RevealImage>
+            </div>
+          ))}
         </div>
 
         <motion.div
@@ -49,12 +51,7 @@ export default function UniversesHero() {
           animate="show"
           className="relative z-10 px-4 pb-4 pt-28 text-white sm:px-6 sm:pb-6 lg:p-8"
         >
-          <motion.span
-            variants={flicker}
-            custom={0}
-            aria-hidden="true"
-            className="block size-1 bg-white"
-          />
+          <motion.span variants={flicker} custom={0} aria-hidden="true" className="block size-1 bg-white" />
           <motion.h1
             variants={flicker}
             custom={0.1}

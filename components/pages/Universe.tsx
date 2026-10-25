@@ -1,9 +1,25 @@
+'use client';
+
 import { UniverseTheme } from '../universes/UniverseTheme';
 import { AboutStory, CampaignCta, CampaignStats, EmailSignup, FaceOfTheComic, Gallery, IntroVideo, JumpMenu, MeetCharacters, ProductionNotes } from '../universe';
-import type { Universe as UniverseData } from '@/config/universes';
+import { PageError, PageLoader } from '@/components/shared/PageStatus';
+import { useUniverse } from '@/hooks/useUniverses';
+import { ApiError } from '@/lib/api/client';
 
-/** The 8-block universe template from specification section 5, in order. */
-export default function Universe({ universe }: { universe: UniverseData }) {
+/** The 8-block universe template from specification section 5, in order. Data comes from /api/universes/:slug. */
+export default function Universe({ slug }: { slug: string }) {
+  const { universe, error, isLoading, refresh } = useUniverse(slug);
+
+  if (error) {
+    return error instanceof ApiError && error.status === 404 ? (
+      <PageError title="Universe not found" message="This comic isn't on the site, or has been taken down." />
+    ) : (
+      <PageError title="Couldn't load this universe" message={error.message} onRetry={() => refresh()} />
+    );
+  }
+
+  if (isLoading || !universe) return <PageLoader label="Loading universe" />;
+
   return (
     <UniverseTheme universe={universe}>
       <IntroVideo universe={universe} />
@@ -20,4 +36,4 @@ export default function Universe({ universe }: { universe: UniverseData }) {
       </div>
     </UniverseTheme>
   );
-} 
+}

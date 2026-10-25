@@ -6,3 +6,4 @@ export const metadata: Metadata = {
 };
 
 export { default } from '@/components/pages/Universes';
+  

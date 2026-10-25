@@ -139,7 +139,8 @@ model Character {
   copy      String
   power     String?
   role      String
-  image     String
+  /// Image URLs, first one is the main portrait
+  images    String[]
   /// Lower comes first
   sortOrder Int     @default(0)
 

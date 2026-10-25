@@ -2,8 +2,10 @@
 
 import Image from 'next/image';
 import { useDeferredValue, useState } from 'react';
-import { Controller, useForm, useWatch, type RegisterOptions } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch, type RegisterOptions } from 'react-hook-form';
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   ImageIcon,
   LayoutGridIcon,
   ListIcon,
@@ -14,6 +16,7 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
   UsersIcon,
+  XIcon,
   ZapIcon,
 } from 'lucide-react';
 import { useComics } from '@/hooks/useComics';
@@ -91,7 +94,8 @@ type FormValues = {
   role: string;
   power: string;
   copy: string;
-  image: string;
+  /** Objects, not plain strings, because useFieldArray needs them; the first one is the portrait */
+  images: { src: string }[];
   sortOrder: string;
   comics: string[];
 };
@@ -102,7 +106,8 @@ const toFormValues = (c?: CharacterDTO, comic?: string): FormValues => ({
   role: c?.role ?? '',
   power: c?.power ?? '',
   copy: c?.copy ?? '',
-  image: c?.image ?? '',
+  /* A new character starts with one empty slot to type into */
+  images: (c?.images ?? ['']).map((src) => ({ src })),
   sortOrder: String(c?.sortOrder ?? 0),
   /* A new character starts in the comic currently filtered on */
   comics: c?.comics ?? (comic ? [comic] : []),
@@ -114,7 +119,7 @@ const toInput = (v: FormValues): CharacterInput => ({
   role: v.role,
   power: v.power || null,
   copy: v.copy,
-  image: v.image,
+  images: v.images.map((image) => image.src),
   sortOrder: Number(v.sortOrder) || 0,
   comics: v.comics,
 });
@@ -129,7 +134,7 @@ const toOptimistic = (input: CharacterInput, id: string, current?: CharacterDTO)
     copy: input.copy,
     power: input.power ?? null,
     role: input.role,
-    image: input.image,
+    images: input.images,
     sortOrder: input.sortOrder ?? 0,
     comics: input.comics,
     createdAt: current?.createdAt ?? now,
@@ -160,13 +165,19 @@ function CharacterForm({
   } = useForm<FormValues>({ defaultValues: rejected?.values ?? toFormValues(character, comic) });
   useRejectedErrors(rejected, setError);
 
-  const image = useWatch({ control, name: 'image' });
+  const images = useFieldArray({
+    control,
+    name: 'images',
+    rules: { validate: (list) => list.length > 0 || 'Add at least one image' },
+  });
+  const imageValues = useWatch({ control, name: 'images' });
+  const portrait = imageValues?.[0]?.src;
   const { comics, isLoading: comicsLoading } = useComics();
 
   const onSubmit = handleSubmit(onSave);
 
   /** Wires an input to the form and marks it invalid for the field styles */
-  type TextField = Exclude<keyof FormValues, 'comics'>;
+  type TextField = Exclude<keyof FormValues, 'comics' | 'images'>;
   const field = (name: TextField, rules?: RegisterOptions<FormValues, TextField>) => ({
     id: name,
     'aria-invalid': !!errors[name],
@@ -188,10 +199,10 @@ function CharacterForm({
           <FieldGroup>
             <div className="flex gap-4">
               <div className="relative aspect-3/4 w-32 shrink-0 overflow-hidden rounded-xl border border-dashed bg-muted/30">
-                {image ? (
+                {portrait ? (
                   // Plain img: the URL can point anywhere while it's being typed
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
+                  <img src={portrait} alt="" className="absolute inset-0 size-full object-cover" />
                 ) : (
                   <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
                     <ImageIcon className="size-5" /> Portrait
@@ -204,13 +215,75 @@ function CharacterForm({
                   <Input placeholder='Jessica "Jess" Malone' {...field('name', { required: 'Name is required' })} />
                   <FieldError errors={[errors.name]} />
                 </Field>
-                <Field data-invalid={!!errors.image}>
-                  <FieldLabel htmlFor="image">Image URL</FieldLabel>
-                  <Input placeholder="https://… or /assets/…" {...field('image', { required: 'Image is required' })} />
-                  <FieldError errors={[errors.image]} />
-                </Field>
               </div>
             </div>
+
+            {/* Images: the first is the portrait on cards and in the list */}
+            <FieldSet data-invalid={!!(errors.images?.root ?? errors.images?.message)}>
+              <FieldLegend variant="label">Images</FieldLegend>
+              <FieldDescription>The first one is the portrait. Use the arrows to reorder.</FieldDescription>
+              <div className="space-y-2">
+                {images.fields.map((f, i) => (
+                  <div key={f.id} className="flex items-start gap-2 rounded-lg border p-2">
+                    <div className="relative aspect-3/4 w-12 shrink-0 overflow-hidden rounded bg-muted">
+                      {imageValues?.[i]?.src && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={imageValues[i].src} alt="" className="absolute inset-0 size-full object-cover" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Input
+                        placeholder="https://… or /assets/…"
+                        aria-label={`Image ${i + 1} URL`}
+                        aria-invalid={!!errors.images?.[i]?.src}
+                        {...register(`images.${i}.src`, { required: 'Image URL is required' })}
+                      />
+                      {i === 0 && <p className="text-xs text-muted-foreground">Portrait</p>}
+                      <FieldError errors={[errors.images?.[i]?.src]} />
+                    </div>
+                    <div className="flex flex-col">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Move up"
+                        disabled={i === 0}
+                        onClick={() => images.move(i, i - 1)}
+                      >
+                        <ArrowUpIcon />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Move down"
+                        disabled={i === images.fields.length - 1}
+                        onClick={() => images.move(i, i + 1)}
+                      >
+                        <ArrowDownIcon />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Remove image"
+                        className="hover:text-destructive"
+                        onClick={() => images.remove(i)}
+                      >
+                        <XIcon />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {images.fields.length === 0 && (
+                  <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">No images yet.</p>
+                )}
+              </div>
+              <Button type="button" variant="outline" className="w-fit" onClick={() => images.append({ src: '' })}>
+                <PlusIcon /> Add image
+              </Button>
+              <FieldError errors={[{ message: errors.images?.root?.message ?? errors.images?.message }]} />
+            </FieldSet>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field>
@@ -321,15 +394,18 @@ function CharacterGrid({ characters, isPending, onEdit, onDelete }: ViewProps) {
         const pending = isPending(c.id);
         return (
           <Card key={c.id} inert={pending} className={cn('group gap-0 py-0', pending && 'opacity-60')}>
-            <button type="button" onClick={() => onEdit(c)} className="relative aspect-3/4 overflow-hidden text-left">
-              <Image
-                src={c.image}
-                alt={c.name}
-                fill
-                unoptimized
-                sizes="(min-width: 1536px) 16vw, (min-width: 1024px) 25vw, 50vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
+            <button type="button" onClick={() => onEdit(c)} className="relative aspect-3/4 overflow-hidden bg-muted text-left">
+              {/* The first image is the portrait */}
+              {c.images[0] && (
+                <Image
+                  src={c.images[0]}
+                  alt={c.name}
+                  fill
+                  unoptimized
+                  sizes="(min-width: 1536px) 16vw, (min-width: 1024px) 25vw, 50vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              )}
               <span className="absolute inset-0 bg-linear-to-t from-black/90 via-black/10 to-transparent" />
               <span className="absolute inset-x-3 top-3 flex flex-wrap gap-1">
                 {c.comics.map((slug) => (
@@ -407,7 +483,7 @@ function CharacterTable({ characters, isPending, onEdit, onDelete }: ViewProps) 
                 <TableCell className="pl-4">
                   <div className="flex items-center gap-3">
                     <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      <Image src={c.image} alt="" fill sizes="40px" className="object-cover" unoptimized />
+                      {c.images[0] && <Image src={c.images[0]} alt="" fill sizes="40px" className="object-cover" unoptimized />}
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-medium">{c.name}</p>

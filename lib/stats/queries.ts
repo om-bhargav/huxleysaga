@@ -131,7 +131,7 @@ export async function getDashboard(): Promise<DashboardDTO> {
       id: c.id,
       name: c.name,
       alias: c.alias,
-      image: c.image,
+      image: c.images[0],
       comic: c.comics[0] ? toComicRef(c.comics[0].comic) : null,
     })),
     recentTestimonials: recentTestimonials.map(({ id, quote, name, campaign, published }) => ({

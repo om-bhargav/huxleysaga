@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform, type Variants } from 'framer-motion';
 import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // adjust path
 import { BracketButton } from '@/components/shared/BracketButton'; // adjust path
+import { worldImages } from '@/config/worlds'; // adjust path
 
 export type ShowcaseItem = {
   title: string;
@@ -12,12 +13,12 @@ export type ShowcaseItem = {
   button: { label: string; href: string };
 };
 
-/* One panel per world. Images come from /public/characters for now. */
+/* One panel per world. Images come from config/worlds, so they match the rest of the site. */
 const spyFiles: ShowcaseItem = {
   title: 'Spy Files',
   description:
     'Step into a world of covert operations, hidden identities, and high-stakes missions. Follow elite agents as they uncover secrets buried deep within a global web of deception.',
-  image: '/characters/agent-scarlett/1.png',
+  image: worldImages['spy-files'],
   button: { label: 'Explore Spy Files', href: '/universes/spy-files' },
 };
 
@@ -25,7 +26,7 @@ const wildWest: ShowcaseItem = {
   title: 'Wild West',
   description:
     'Ride into a lawless frontier of outlaws, gunslingers, and dusty towns. In the Wild West, every trail has a story and every showdown could change your fate.',
-  image: '/characters/vipress/1.png',
+  image: worldImages['wild-west'],
   button: { label: 'Explore Wild West', href: '/universes/wild-west' },
 };
 
@@ -33,7 +34,7 @@ const gameWorld: ShowcaseItem = {
   title: 'Game World',
   description:
     'Enter worlds where every decision matters. From legendary heroes to dangerous quests, discover immersive stories and unforgettable adventures built for gamers.',
-  image: '/characters/kat/4.png', // TODO: swap for Game World art
+  image: worldImages['game-world'],
   button: { label: 'Explore Game World', href: '/universes/game-world' },
 };
 
@@ -41,7 +42,7 @@ const fantasyLand: ShowcaseItem = {
   title: 'Fantasy Land',
   description:
     'Enter a realm of legendary heroes, ancient magic, and twisted tournaments. In Fantasy Land, every battle is a test, and fate is never in your own hands.',
-  image: '/characters/Dracona/1.png', // TODO: swap for Fantasy Land art
+  image: worldImages['fantasy-land'],
   button: { label: 'Explore Fantasy Land', href: '/universes/fantasy-land' },
 };
 

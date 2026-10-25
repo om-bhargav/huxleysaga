@@ -120,7 +120,7 @@ async function seedCharacter(c: MergedCharacter) {
       copy: c.copy,
       power: c.power ?? null,
       role: c.role,
-      image: c.images[0],
+      images: c.images,
       sortOrder: c.sortOrder,
       comics: { create: c.comics.map((comicSlug) => ({ comicSlug })) },
     },

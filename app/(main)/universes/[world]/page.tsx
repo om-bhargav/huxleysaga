@@ -8,7 +8,7 @@ import { getWorld, worlds } from '@/config/worlds';
 export function generateStaticParams() {
   return worlds.map((world) => ({ world: world.slug }));
 }
-
+ 
 export async function generateMetadata({ params }: PageProps<'/universes/[world]'>): Promise<Metadata> {
   const { world: slug } = await params;
   const world = getWorld(slug);

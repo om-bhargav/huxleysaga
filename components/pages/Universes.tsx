@@ -1,12 +1,12 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
 import { RollingNumber } from '@/components/shared/RollingNumber'; // adjust path
-import { displayFont } from '@/fonts/universes'; // adjust path
-import { studioStats, universes } from '@/config/universes'; // adjust path
+import { PageError, PageLoader } from '@/components/shared/PageStatus';
+import { useStats } from '@/hooks/useStats';
+import { useUniverses } from '@/hooks/useUniverses';
+import { formatMoney } from '@/lib/format';
 import UniversesHero from '../universes/UniverseHero';
 import UniverseCard from '../universes/UniverseCard';
 
@@ -20,8 +20,28 @@ const rise = {
 /**
  * Our Universes (/universes). One card per world, each wearing its own palette and
  * display face so the overview already reads as six different places.
+ * Cards come from /api/universes, totals from /api/stats.
  */
 export default function Universes() {
+  const { universes, error: universesError, isLoading: universesLoading, refresh: refreshUniverses } = useUniverses();
+  const { stats, error: statsError, isLoading: statsLoading, refresh: refreshStats } = useStats();
+
+  const error = universesError ?? statsError;
+  if (error) {
+    return (
+      <PageError
+        title="Couldn't load the universes"
+        message={error.message}
+        onRetry={() => {
+          void refreshUniverses();
+          void refreshStats();
+        }}
+      />
+    );
+  }
+
+  if (universesLoading || statsLoading || !stats) return <PageLoader label="Loading universes" />;
+
   return (
     <div className="relative z-10 grid gap-8 md:gap-20 bg-background">
       <UniversesHero />
@@ -31,7 +51,7 @@ export default function Universes() {
           text="Six worlds. One studio. Each comic is its own universe, with its own characters, stories and style, made to get lost in."
         />
 
-        {/* Studio totals, from specification section 8 */}
+        {/* Studio totals, worked out from the campaigns */}
         <motion.dl
           initial="hidden"
           whileInView="show"
@@ -40,10 +60,10 @@ export default function Universes() {
           className="mt-12 grid grid-cols-2 gap-3 lg:grid-cols-4"
         >
           {[
-            { label: 'Raised', value: studioStats.raised },
-            { label: 'Backer pledges', count: studioStats.pledges },
-            { label: 'Issues funded', count: studioStats.issuesFunded },
-            { label: 'On the way', count: studioStats.issuesComing },
+            { label: 'Raised', value: formatMoney(stats.raised) },
+            { label: 'Backer pledges', count: stats.backers },
+            { label: 'Issues funded', count: stats.fundedIssues },
+            { label: 'On the way', count: stats.upcomingIssues },
           ].map((stat) => (
             <motion.div
               key={stat.label}
@@ -68,8 +88,8 @@ export default function Universes() {
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.1 } } }}
           className="grid gap-3 lg:grid-cols-2"
         >
-          {universes.map((universe,idx) => (
-            <UniverseCard direction={idx%2 === 0 ? "left-right":"right-left"} key={idx} universe={universe}/>
+          {universes.map((universe, idx) => (
+            <UniverseCard direction={idx % 2 === 0 ? 'left-right' : 'right-left'} key={universe.slug} universe={universe} />
           ))}
         </motion.ul>
       </section>

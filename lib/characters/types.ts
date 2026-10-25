@@ -9,7 +9,7 @@ export type CharacterDTO = {
   copy: string;
   power: string | null;
   role: string;
-  image: string;
+  images: string[];
   sortOrder: number;
   /** Slugs of the comics this character appears in */
   comics: string[];
@@ -24,7 +24,7 @@ export type CharacterInput = {
   copy: string;
   power?: string | null;
   role: string;
-  image: string;
+  images: string[];
   sortOrder?: number;
   comics: string[];
 };

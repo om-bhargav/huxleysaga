@@ -12,9 +12,12 @@ import {
 } from '@/components/shared/CharactersSection'; // adjust path
 import { displayFont } from '@/fonts/universes'; // adjust path
 import type { Issue, Universe } from '@/config/universes'; // adjust path
-import { comicsIn, displayFontClass, worlds, type World } from '@/config/worlds'; // adjust path
+import { displayFontClass, worlds, type World } from '@/config/worlds'; // adjust path
 import { socialLinks } from '@/config/links'; // adjust path
 import UniverseCard from '@/components/universes/UniverseCard';
+import { PageError, PageLoader } from '@/components/shared/PageStatus';
+import { useUniverses, useWorldUniverses } from '@/hooks/useUniverses';
+import type { UniverseSummary } from '@/lib/universes/types';
 import LoadedImage from '../shared/LoadedImage';
 import { useState } from 'react';
 
@@ -43,11 +46,32 @@ const toNumber = (money?: string) => Number(money?.replace(/[^0-9.]/g, '')) || 0
  * One world (/universes/[world]): its hero, its comics, every character from those
  * comics, the world's Kickstarter record, the other worlds, and a closing call to action.
  * Only this world's data is shown.
+ *
+ * The world itself (name, line, face) comes from config/worlds; its comics, characters and
+ * campaigns from /api/worlds/:slug, and the other worlds' comic names from /api/universes.
  */
 export default function WorldPage({ world }: { world: World }) {
-  const comics = comicsIn(world);
+  const { comics, error: comicsError, isLoading: comicsLoading, refresh: refreshComics } = useWorldUniverses(world.slug);
+  const { universes, error: universesError, isLoading: universesLoading, refresh: refreshUniverses } = useUniverses();
+
+  const error = comicsError ?? universesError;
+  if (error) {
+    return (
+      <PageError
+        title={`Couldn't load ${world.label}`}
+        message={error.message}
+        onRetry={() => {
+          void refreshComics();
+          void refreshUniverses();
+        }}
+      />
+    );
+  }
+
+  if (comicsLoading || universesLoading) return <PageLoader label={`Loading ${world.label}`} />;
+
   const lead = comics[0];
-  if (!lead) return null;
+  if (!lead) return <PageError title={world.label} message="No comics in this world yet." />;
 
   return (
     <div className="relative z-10 grid gap-8 bg-background md:gap-20">
@@ -55,7 +79,7 @@ export default function WorldPage({ world }: { world: World }) {
       <Comics world={world} comics={comics} />
       <Characters world={world} comics={comics} lead={lead} />
       <KickstarterJourney world={world} comics={comics} />
-      <OtherWorlds current={world} />
+      <OtherWorlds current={world} universes={universes} />
     </div>
   );
 }
@@ -76,7 +100,7 @@ function WorldHero({ world, comics, lead }: { world: World; comics: Universe[]; 
         className="absolute inset-0"
       >
         <LoadedImage
-          src={lead.hero.poster}
+          src={world.image}
           alt=""
           fill
           priority
@@ -123,7 +147,7 @@ function WorldHero({ world, comics, lead }: { world: World; comics: Universe[]; 
 function Comics({ world, comics }: { world: World; comics: Universe[] }) {
   return (
     <section className="px-3 font-heading uppercase">
-      <SectionIntro title="The Comics" text={`Every story set in ${world.label}.`} aside={`[${pad(comics.length)}]`} titleClassName={displayFontClass[world.display]} />
+      <SectionIntro title="The Comics" text={`Every story set in ${world.label}.`} titleClassName={displayFontClass[world.display]} />
       <motion.ul
         initial="hidden"
         whileInView="show"
@@ -171,7 +195,7 @@ function Characters({ world, comics, lead }: { world: World; comics: Universe[];
   return (
     <section className="px-3">
       <div className="font-heading uppercase">
-        <SectionIntro title="Characters" text={`The faces of ${world.label}.`} aside={`[${pad(characters.length)}]`} />
+        <SectionIntro title="Characters" text={`The faces of ${world.label}.`} />
       </div>
 
       <div className="mt-12">
@@ -225,7 +249,6 @@ function KickstarterJourney({ world, comics }: { world: World; comics: Universe[
       <SectionIntro
         title="Kickstarter Journey"
         text={`How the backers brought ${world.label} to life.`}
-        aside={`[${pad(issues.length)}]`}
       />
 
       {/* World totals, worked out from each comic's campaigns */}
@@ -325,7 +348,7 @@ function IssueCard({ issue, universe }: { issue: Issue; universe: Universe }) {
 
 /* ---------- Links to the other worlds ---------- */
 
-function OtherWorlds({ current }: { current: World }) {
+function OtherWorlds({ current, universes }: { current: World; universes: UniverseSummary[] }) {
   const others = worlds.filter((w) => w.slug !== current.slug);
   if (!others.length) return null;
 
@@ -359,7 +382,8 @@ function OtherWorlds({ current }: { current: World }) {
                 {world.label}
               </span>
               <span className="mt-auto pt-6 text-[10px] leading-relaxed tracking-widest text-white/50 sm:text-[11px]">
-                {comicsIn(world)
+                {universes
+                  .filter((u) => u.worldSlug === world.slug)
                   .map((u) => u.name)
                   .join(' · ')}
               </span>

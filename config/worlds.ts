@@ -11,6 +11,8 @@ export type World = {
   /** One line under the world's name. Drafted from the story copy; edit freely. */
   line: string;
   display: Universe['display'];
+  /** Cover art for the world, from /public */
+  image: string;
   /** Universe slugs, in the order they should appear */
   comics: string[];
 };
@@ -21,6 +23,7 @@ export const worlds: World[] = [
     label: 'Spy Files',
     line: 'Undercover agents, secret facilities and missions where nothing is ever quite what it seems.',
     display: 'stencil',
+    image: '/characters/agent-scarlett/1.png',
     comics: ['agent-scarlett', 'silk-sting'],
   },
   {
@@ -28,6 +31,7 @@ export const worlds: World[] = [
     label: 'Wild West',
     line: 'Five outlaws, a cursed bottle and the lawless town of Dusthaven.',
     display: 'western',
+    image: '/characters/vipress/1.png',
     comics: ['venom-vixens'],
   },
   {
@@ -35,6 +39,7 @@ export const worlds: World[] = [
     label: 'Game World',
     line: 'A digital labyrinth that learns from every move, where death is never the end.',
     display: 'astroz',
+    image: '/characters/kat/4.png', // TODO: swap for Game World art
     comics: ['boundless-loop'],
   },
   {
@@ -42,9 +47,15 @@ export const worlds: World[] = [
     label: 'Fantasy Land',
     line: "Heroes of legend, chained into a witch duo's tournament.",
     display: 'morris',
+    image: '/characters/Dracona/1.png', // TODO: swap for Fantasy Land art
     comics: ['chains-of-fate'],
   },
 ];
+
+/** Each world's image by slug, e.g. worldImages['spy-files'] */
+export const worldImages: Record<string, string> = Object.fromEntries(
+  worlds.map((world) => [world.slug, world.image]),
+);
 
 /** The world for a /universes/[world] path, or undefined */
 export const getWorld = (slug: string): World | undefined => worlds.find((world) => world.slug === slug);
