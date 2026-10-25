@@ -94,11 +94,12 @@ export function AboutStory({ universe }: { universe: Universe }) {
               direction="right-left"
               delay={0.2}
               sizes="(min-width: 1024px) 40vw, 94vw"
-              /* Phones: 4:3. Desktop: a fixed height that always fits the screen, so it can stick */
-              className="aspect-4/3 lg:aspect-auto lg:h-[min(60svh,520px)]"
+              /* Phones: 4:3. Desktop: a fixed height that always fits the screen, so it can stick.
+                 Every image inside (including glitch layers) fills the frame and crops instead of letterboxing. */
+              className="relative aspect-4/3 overflow-hidden lg:aspect-auto lg:h-[min(60svh,520px)] [&_img]:!h-full [&_img]:!w-full [&_img]:object-cover [&_img]:object-center"
             >
               <span
-                className="absolute bottom-3 left-3 border bg-black/60 px-2 py-1 font-heading text-[10px] uppercase tracking-widest backdrop-blur-sm sm:text-[11px]"
+                className="absolute bottom-3 left-3 z-10 border bg-black/60 px-2 py-1 font-heading text-[10px] uppercase tracking-widest backdrop-blur-sm sm:text-[11px]"
                 style={{ borderColor: 'var(--u-accent)', color: 'var(--u-accent)' }}
               >
                 {universe.shortName}

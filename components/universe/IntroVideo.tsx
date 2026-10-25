@@ -25,6 +25,7 @@ export function IntroVideo({ universe }: { universe: Universe }) {
           alt=""
           direction="bottom-up"
           trigger="mount"
+          unoptimized={true}
           priority
           sizes="100vw"
           className="size-full"

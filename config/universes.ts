@@ -75,7 +75,7 @@ export const universes: Universe[] = [
       gallery: 'Wanted posters on a saloon wall. Click peels the poster forward to full screen; arrows slide to the next.',
     },
     hero: {
-      poster: '/characters/vipress/1.png',
+      poster: 'https://i.kickstarter.com/assets/054/763/769/689e1b9a64400fc209e1bf8989d3101f_original.png?fit=scale-down&origin=ugc&q=100&v=1786731435&width=680&sig=%2FqKlGchoh9yC83eXtDNAivQIgxb8FpWouEU%2BBH4C95c%3D',
       videoNote: 'Video → story snippets → atmosphere → the five women.',
       video: "https://youtu.be/DK0pKcZxrwM?si=rkHSFrB8MzYDjKY_"
     },
