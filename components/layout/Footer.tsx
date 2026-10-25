@@ -16,7 +16,7 @@ export default function Footer() {
     <footer className="px-3 pb-3 pt-4 text-[11px] uppercase tracking-wide fixed inset-x-0 bottom-0 z-4 bg-background h-122 md:h-90">
       {/* Big wordmark */}
       <div className="relative pb-2 grid place-items-center">
-        <StretchText className="font-heading text-[12vw] font-bold leading-[0.78]">
+        <StretchText className="font-heading text-[12vw] font-bold leading-[0.85] mb-4">
           {SITE_NAME}
         </StretchText>
       </div>
@@ -67,11 +67,24 @@ export default function Footer() {
 
       <div className="flex flex-col gap-2 pt-3 text-neutral-400 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <p className="sm:flex-1">© 2026 {SITE_NAME} LLC. All rights reserved</p>
+
         <ul className="flex gap-4 sm:gap-3 lg:mr-auto lg:w-[460px]">
           <li><Link href="#" className="hover:text-white">Terms</Link></li>
           <li><Link href="#" className="hover:text-white">Privacy</Link></li>
         </ul>
-        <p>Site by Om Bhargav</p>
+
+        <p className="text-sm">
+          Designed &amp; built by{" "}
+          <Link
+            href="https://om-bhargav.vercel.app"
+            target="_blank"
+            rel="noopener"
+            title="Om Bhargav – Web Developer"
+            className="font-medium text-neutral-300 underline-offset-4 hover:text-white hover:underline"
+          >
+            Om Bhargav
+          </Link>
+        </p>
       </div>
     </footer>
   );

@@ -50,7 +50,7 @@ const channels: Channel[] = [
 export default function ContactChannels() {
   return (
     <section className="px-3 uppercase">
-      <SectionIntro title="What Are You After" aside={`[${String(channels.length).padStart(2, '0')}]`} />
+      <SectionIntro title="What Are You After" />
 
       <motion.ul
         initial="hidden"

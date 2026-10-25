@@ -16,7 +16,7 @@ const toShowcase = (c: Character): ShowcaseCharacter => ({
   name: c.name,
   alias: c.alias,
   description: c.copy,
-  images: [c.image],
+  images: c.images,
   stats: [
     { label: 'Role', value: c.role },
     ...(c.power ? [{ label: 'Power', value: c.power }] : []),

@@ -29,7 +29,6 @@ export default function Universes() {
         <SectionIntro
           title="Our Universes"
           text="Six worlds. One studio. Each comic is its own universe, with its own characters, stories and style, made to get lost in."
-          aside={`[${String(universes.length).padStart(2, '0')}]`}
         />
 
         {/* Studio totals, from specification section 8 */}

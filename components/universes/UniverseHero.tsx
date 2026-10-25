@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
 import { flicker } from '@/components/shared/SectionIntro'; // adjust path
 import { UNIVERSES_BANNER } from '@/lib/assets';
+import { SITE_NAME } from '@/config';
 
 /* Set in lib/assets, so the loader fetches it up front */
 const banner = UNIVERSES_BANNER;
@@ -67,7 +68,7 @@ export default function UniversesHero() {
             className="mt-3 max-w-[48ch] text-[11px] leading-relaxed tracking-widest text-white/70 lg:text-xs"
           >
             {/* Placeholder copy: swap in your real text */}
-            Every world in the Huxley saga, from the first robot drawing to the latest edition. Pick one and step in.
+            Every world in the {SITE_NAME}, from the first robot drawing to the latest edition. Pick one and step in.
           </motion.p>
 
           <motion.div

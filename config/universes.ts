@@ -12,7 +12,7 @@ export type Character = {
   copy: string;
   power?: string;
   role: string;
-  image: string;
+  images: string[];
 };
 
 export type Issue = {
@@ -75,8 +75,9 @@ export const universes: Universe[] = [
       gallery: 'Wanted posters on a saloon wall. Click peels the poster forward to full screen; arrows slide to the next.',
     },
     hero: {
-      poster: art('noc-venom-hero', 1920, 1080),
+      poster: '/characters/vipress/1.png',
       videoNote: 'Video → story snippets → atmosphere → the five women.',
+      video: "https://youtu.be/DK0pKcZxrwM?si=rkHSFrB8MzYDjKY_"
     },
     story: {
       headline: 'Cursed & Savage',
@@ -85,58 +86,50 @@ export const universes: Universe[] = [
     },
     characters: [
       {
-        name: 'Jessica "Jess" Malone',
-        alias: 'Viperess',
+        name: 'Vipress',
         copy: "The woman who calls the shots. Cool-headed and always three moves ahead, Jess knows when to wait and when to strike. She doesn't chase her prey. She lets it come to her. With Widow's Kiss in her veins, that patience becomes something far more dangerous.",
         power: 'Venomous bite',
         role: 'Leader',
-        image: art('noc-venom-jess', 900, 1200),
+        images: ['/characters/vipress/1.png'],
       },
       {
-        name: 'Amanda "Mandy" Reed',
-        alias: 'Stingra',
+        name: 'Stingra',
         copy: "Some women pick fights. Mandy lives for them. Hot-headed, reckless, and always ready to throw the first punch, Mandy never backs down from a fight. She runs on adrenaline and loves the chaos. With Widow's Kiss in her veins, she now has a sting that can stop anyone in their tracks.",
         power: 'Paralysing sting',
         role: 'Enforcer',
-        image: art('noc-venom-mandy', 900, 1200),
+        images: ['/characters/Stingra/1.png'],
       },
       {
-        name: 'Wei Ling Zhao',
-        alias: 'Arachne',
+        name: 'Aarachne',
         copy: "The quiet one is usually the dangerous one. Ling doesn't waste words or make careless moves. She watches, waits, and lets her targets walk straight into the trap. Patient and precise, she's the one who sees the move coming before anyone else does. With Widow's Kiss in her veins, her silk and webs make sure there's nowhere left to run.",
         power: 'Web & silk manipulation',
         role: 'Strategist',
-        image: art('noc-venom-ling', 900, 1200),
+        images: ['/characters/aarachne/1.png'],
       },
       {
-        name: 'Latasha "Tasha" Washington',
-        alias: 'Queen Bee',
+        name: 'Queen Bee',
         copy: "She doesn't enter a room. She owns it. Confident, commanding, and impossible to ignore, Tasha naturally takes control wherever she goes. She doesn't need to raise her voice to be heard. One look is enough. And when the Queen calls, the swarm answers.",
         power: 'Venomous stinger & swarm control',
         role: 'The Queen',
-        image: art('noc-venom-tasha', 900, 1200),
+        images: ['/characters/queen%20bee/1.png'],
       },
       {
-        name: 'Francesca "Frankie" Bianchi',
-        alias: 'Dracona',
+        name: 'Dracona',
         copy: "Subtle was never really her thing. Rough, rowdy, and completely unfiltered, Frankie is the muscle of the Vixens. She'd rather throw a punch than make a plan, and she's never been afraid to get her hands dirty. With Widow's Kiss in her veins, those hands just got a whole lot more dangerous.",
         power: 'Venomous bite & claws',
         role: 'Brute force',
-        image: art('noc-venom-frankie', 900, 1200),
+        images: ['/characters/Dracona/1.png'],
       },
     ],
     gallery: {
-      title: 'A Taste of What\'s Inside',
-      note: 'Covers first, then interior pages, so the wall reads like a story. Previews stay non-explicit.',
+      title: 'Wanted in Dusthaven',
+      note: 'The five Vixens as wanted posters on the saloon wall, leader first. Previews stay non-explicit.',
       images: [
-        { src: art('noc-venom-g1'), caption: 'Cover · Issue #1' },
-        { src: art('noc-venom-g2'), caption: 'Variant cover' },
-        { src: art('noc-venom-g3'), caption: 'The gold train' },
-        { src: art('noc-venom-g4'), caption: "Widow's Kiss" },
-        { src: art('noc-venom-g5'), caption: 'Dusthaven' },
-        { src: art('noc-venom-g6'), caption: 'Interior page' },
-        { src: art('noc-venom-g7'), caption: 'Interior page' },
-        { src: art('noc-venom-g8'), caption: 'Black and white' },
+        { src: '/characters/vipress/1.png', caption: 'Wanted · Vipress' },
+        { src: '/characters/Stingra/1.png', caption: 'Wanted · Stingra' },
+        { src: '/characters/aarachne/1.png', caption: 'Wanted · Aarachne' },
+        { src: '/characters/queen%20bee/1.png', caption: 'Wanted · Queen Bee' },
+        { src: '/characters/Dracona/1.png', caption: 'Wanted · Dracona' },
       ],
     },
     campaign: [
@@ -150,14 +143,19 @@ export const universes: Universe[] = [
       },
       { title: 'Venom Vixens #2', status: '[PLACEHOLDER] title, synopsis and status' },
     ],
-    face: null,
+    face: {
+      name: 'Queen Bee',
+      tag: 'The Queen',
+      bio: "She doesn't enter a room. She owns it. When the Queen calls, Dusthaven's swarm answers, and after one sip of Widow's Kiss, nobody is left who can tell her no.",
+      href: '#',
+      image: '/characters/queen%20bee/1.png',
+    },
     cta: {
       headline: 'They took the gold. Now take home the story.',
       buttons: [{ label: 'Get Venom Vixens', href: '#' }],
     },
     signup: { line: 'Ride with us. Get the next drop first.' },
   },
-
   {
     slug: 'agent-scarlett',
     name: 'Agent Scarlett',
@@ -175,7 +173,7 @@ export const universes: Universe[] = [
       gallery: 'Wall of surveillance monitors. Click a feed to zoom into the full artwork with scanlines; arrows switch cameras.',
     },
     hero: {
-      poster: art('noc-scarlett-hero', 1920, 1080),
+      poster: '/characters/agent-scarlett/1.png',
       videoNote: 'Tech-facility infiltration, spy-thriller pacing.',
     },
     story: {
@@ -187,36 +185,53 @@ export const universes: Universe[] = [
         name: 'Agent Scarlett',
         copy: 'The central operative of Honey Trap. A seductive and highly capable agent who uses charm, intelligence and deception as weapons.',
         role: 'Undercover agent',
-        image: art('noc-scarlett-c1', 900, 1200),
+        images: [
+          '/characters/agent-scarlett/1.png',
+          '/characters/agent-scarlett/2.gif',
+          '/characters/agent-scarlett/3.png',
+          '/characters/agent-scarlett/4.png',
+          '/characters/agent-scarlett/5.gif',
+        ],
       },
       {
         name: 'Kat',
         copy: 'A higher-ranking operative within the same world. Her experience and position place her above Scarlett in the agency hierarchy.',
         role: 'Senior undercover agent',
-        image: art('noc-scarlett-c2', 900, 1200),
-      },
-      {
-        name: '[PLACEHOLDER] name',
-        alias: 'Feline companion',
-        copy: "Scarlett's feline companion, but with a deeper identity and presence within the story.",
-        role: '[PLACEHOLDER] role',
-        image: art('noc-scarlett-c3', 900, 1200),
+        images: [
+          '/characters/kat/1.png',
+          '/characters/kat/2.png',
+          '/characters/kat/3.png',
+          '/characters/kat/4.png',
+        ],
       },
       {
         name: 'Dr. Aria Chen',
         copy: "A doctor whose involvement connects her to the events and larger mystery surrounding Scarlett's mission.",
         role: 'Doctor / scientist',
-        image: art('noc-scarlett-c4', 900, 1200),
+        images: [
+          '/characters/aria-chen/1.png',
+          '/characters/aria-chen/2.png',
+        ],
+      },
+      {
+        name: 'Scarlett & Aria Chen',
+        copy: "The operative and the doctor, side by side. Their paths cross at the heart of Scarlett's mission and the larger mystery surrounding it.",
+        role: 'Operative & doctor',
+        images: [
+          '/characters/scarlett_and_aria/1.gif',
+          '/characters/scarlett_and_aria/2.gif',
+          '/characters/scarlett_and_aria/3.gif',
+        ],
       },
     ],
     gallery: {
       title: 'Case Files 01–05',
       images: [
-        { src: art('noc-scarlett-g1'), caption: 'Rooftop surveillance' },
-        { src: art('noc-scarlett-g2'), caption: 'Pop-art gun close-up' },
-        { src: art('noc-scarlett-g3'), caption: 'Tank sequence' },
-        { src: art('noc-scarlett-g4'), caption: 'Red-costume portrait' },
-        { src: art('noc-scarlett-g5'), caption: 'Green containment chamber' },
+        { src: '/characters/agent-scarlett/3.png', caption: 'Rooftop surveillance' },
+        { src: '/characters/agent-scarlett/4.png', caption: 'Pop-art gun close-up' },
+        { src: '/characters/scarlett_and_aria/2.gif', caption: 'Tank sequence' },
+        { src: '/characters/agent-scarlett/1.png', caption: 'Red-costume portrait' },
+        { src: '/characters/aria-chen/2.png', caption: 'Green containment chamber' },
       ],
     },
     campaign: [
@@ -234,7 +249,7 @@ export const universes: Universe[] = [
       tag: 'Collaborator',
       bio: '[PLACEHOLDER] 2–3 sentence bio, pending Kat Marie\'s approval.',
       href: '#',
-      image: art('noc-scarlett-face', 1000, 1250),
+      image: '/characters/kat/1.png',
     },
     cta: {
       headline: "The mission doesn't end here. Get closer to Agent Scarlett and own a piece of the story.",
@@ -273,26 +288,26 @@ export const universes: Universe[] = [
         alias: 'Cargo #07',
         copy: 'An elite agent who lets herself be captured to take down the Silk from the inside. Unnervingly composed, and always one step ahead of the games.',
         role: 'Undercover agent',
-        image: art('noc-silk-c1', 900, 1200),
+        images: [art('noc-silk-c1', 900, 1200)],
       },
       {
         name: 'Prisha',
         copy: "A young captive who quickly becomes Kat's ally. Kat protects her at every turn.",
         role: 'Ally',
-        image: art('noc-silk-c2', 900, 1200),
+        images: [art('noc-silk-c2', 900, 1200)],
       },
       {
         name: 'Vesna',
         alias: 'Silk #01',
         copy: "One of the Silk's highest-ranking figures. Struck by Kat's composure, she becomes determined to break her and claim her.",
         role: 'Antagonist',
-        image: art('noc-silk-c3', 900, 1200),
+        images: [art('noc-silk-c3', 900, 1200)],
       },
       {
         name: 'The Masked Enforcers',
         copy: "The Silk's masked guards. Feared by the contestants, and not quite what they seem.",
         role: "The Silk's enforcers",
-        image: art('noc-silk-c4', 900, 1200),
+        images: [art('noc-silk-c4', 900, 1200)],
       },
     ],
     gallery: {
@@ -311,7 +326,7 @@ export const universes: Universe[] = [
       tag: 'Collaborator',
       bio: 'The face behind the mask. [PLACEHOLDER] bio, pending confirmation.',
       href: '#',
-      image: art('noc-silk-face', 1000, 1250),
+      image: art('noc-silk-face', 1000, 1250)
     },
     cta: {
       headline: 'Take her place at the table. Follow Kat inside the Silk.',
@@ -349,46 +364,46 @@ export const universes: Universe[] = [
         name: 'Elara Vance',
         copy: "The mind behind The Labyrinth. Elara understands its code, systems and mechanics better than anyone else. But being its creator doesn't make her safe inside it. As the Labyrinth begins behaving in ways she never designed, her knowledge becomes her greatest weapon.",
         role: 'Lead developer',
-        image: art('noc-loop-c1', 900, 1200),
+        images: [art('noc-loop-c1', 900, 1200)],
       },
       {
         name: 'Luna',
         copy: 'Trapped inside The Labyrinth since Patch 0.4. With no powers or special abilities, she has survived by staying hidden, studying the system, and learning how the game behaves. She knows more about surviving it than almost anyone.',
         power: 'None',
         role: 'Beta tester',
-        image: art('noc-loop-c2', 900, 1200),
+        images: [art('noc-loop-c2', 900, 1200)],
       },
       {
         name: 'Lyra',
         copy: 'At first, exactly what Elara needs: an ally who knows how to fight and navigate the Labyrinth. But Lyra is playing a much deeper game. Beneath the helpful support-class persona is someone with a very different allegiance.',
         power: 'Archery',
         role: 'Archer / support class NPC',
-        image: art('noc-loop-c3', 900, 1200),
+        images: [art('noc-loop-c3', 900, 1200)],
       },
       {
         name: 'Slade',
         copy: "Fast, relentless and nearly impossible to predict, one of the Labyrinth's most dangerous hostile entities. Every encounter with him is a fight to stay alive.",
         power: 'Speed',
         role: 'Speedster',
-        image: art('noc-loop-c4', 900, 1200),
+        images: [art('noc-loop-c4', 900, 1200)],
       },
       {
         name: 'Warden Kai',
         copy: 'Serves the hierarchy that controls The Labyrinth, and understands one of its most important rules: every restart makes the game smarter. His warning hints that escaping may require more than surviving.',
         role: 'Warden',
-        image: art('noc-loop-c5', 900, 1200),
+        images: [art('noc-loop-c5', 900, 1200)],
       },
       {
         name: 'Seraphina',
         copy: 'Cold and ruthless, the unforgiving nature of the system. She sees those trapped inside as pieces in a game, and takes particular pleasure in watching them break.',
         role: 'Warden',
-        image: art('noc-loop-c6', 900, 1200),
+        images: [art('noc-loop-c6', 900, 1200)],
       },
       {
         name: 'High Lord Malakor',
         copy: "At the top of the Labyrinth's hierarchy: the power and authority of the system itself, overseeing a world where the rules are absolute.",
         role: 'Supreme figure of the system',
-        image: art('noc-loop-c7', 900, 1200),
+        images: [art('noc-loop-c7', 900, 1200)],
       },
     ],
     gallery: {
@@ -452,20 +467,20 @@ export const universes: Universe[] = [
         copy: "One half of the witch duo who runs the tournament and holds every fighter's fate. [PLACEHOLDER] full bio, powers, look.",
         power: '[PLACEHOLDER]',
         role: 'Witch queen · Tournament master',
-        image: art('noc-chains-c1', 900, 1200),
+        images: [art('noc-chains-c1', 900, 1200)],
       },
       {
         name: 'Queen Scorpia',
         copy: 'The other half of the witch duo. [PLACEHOLDER] full bio, powers, look.',
         power: '[PLACEHOLDER]',
         role: 'Witch queen · Tournament master',
-        image: art('noc-chains-c2', 900, 1200),
+        images: [art('noc-chains-c2', 900, 1200)],
       },
       {
         name: '[PLACEHOLDER] featured fighters',
         copy: 'Fighters to feature: name, origin, powers and role, using the same fields as the other universes. The spec suggests a 50-slot bracket where revealed fighters are lit and the rest unlock with each issue.',
         role: '[PLACEHOLDER]',
-        image: art('noc-chains-c3', 900, 1200),
+        images: [art('noc-chains-c3', 900, 1200)],
       },
     ],
     gallery: {

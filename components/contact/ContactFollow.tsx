@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { FaInstagram, FaYoutube, FaXTwitter } from 'react-icons/fa6';
+import { FaInstagram, FaYoutube, FaXTwitter, FaEnvelope } from 'react-icons/fa6';
 import type { IconType } from 'react-icons';
 import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
 

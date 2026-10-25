@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { HoverGroup, HoverHighlight } from '@/components/shared/HoverHighlight'; // adjust path
 import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
+import { SITE_NAME } from '@/config';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -21,32 +22,32 @@ const events: Event[] = [
   {
     date: '10.23.26',
     venue: 'LightBox Expo',
-    text: 'HUXLEY comes to LightBox Expo in Pasadena with a dedicated booth and an exclusive talk.',
+    text: `${SITE_NAME} comes to LightBox Expo in Pasadena with a dedicated booth and an exclusive talk.`,
     href: '#',
     upcoming: true,
   },
   {
     date: '02.28.26',
     venue: 'Gnomon',
-    text: 'A presentation on the creation of the original sci-fi universe HUXLEY, followed by a gallery reception showcasing artwork on display in the Gnomon Gallery.',
+    text: `A presentation on the creation of the original sci-fi universe ${SITE_NAME}, followed by a gallery reception showcasing artwork on display in the Gnomon Gallery.`,
     href: '#',
   },
   {
     date: '03.05.26',
     venue: 'Emerald City Comic Con',
-    text: 'HUXLEY joined Emerald City Comic Con in Seattle with a large booth, signed books, team meet-and-greets, and several panel discussions.',
+    text: `${SITE_NAME} joined Emerald City Comic Con in Seattle with a large booth, signed books, team meet-and-greets, and several panel discussions.`,
     href: '#',
   },
   {
     date: '10.09.25',
     venue: 'New York Comic Con',
-    text: 'HUXLEY arrived at New York Comic Con. Visit the Barnes & Noble booth on Saturday to get your books signed and meet the team.',
+    text: `${SITE_NAME} arrived at New York Comic Con. Visit the Barnes & Noble booth on Saturday to get your books signed and meet the team.`,
     href: '#',
   },
   {
     date: '09.25.25',
     venue: 'Tokyo Game Show',
-    text: 'Huxley was at Tokyo Game Show. Get in touch to set up meetings and speak with the team.',
+    text: `${SITE_NAME} was at Tokyo Game Show. Get in touch to set up meetings and speak with the team.`,
     href: '#',
   },
 ];
@@ -55,7 +56,7 @@ const events: Event[] = [
 export default function AboutEvents() {
   return (
     <section className="px-3 uppercase">
-      <SectionIntro title="Events" aside={`[${String(events.length).padStart(2, '0')}]`} />
+      <SectionIntro title="Events" />
 
       <motion.ul
         initial="hidden"

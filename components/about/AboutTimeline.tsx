@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { GlitchImage, GlitchScope, useGlitchTrigger } from '@/components/shared/GlitchImage'; // adjust path
 import { HoverGroup, HoverHighlight } from '@/components/shared/HoverHighlight'; // adjust path
 import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
+import { SITE_NAME } from '@/config';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -22,75 +23,75 @@ type Entry = {
 const entries: Entry[] = [
   {
     year: '2014',
-    title: 'Original Huxley Drawing',
-    text: 'The first HUXLEY robot concept is created, planting the seed for the larger world, characters, and mythology that would grow into the HUXLEY universe.',
+    title: `Original ${SITE_NAME} Drawing`,
+    text: `The first ${SITE_NAME} robot concept is created, planting the seed for the larger world, characters, and mythology that would grow into the ${SITE_NAME} universe.`,
     image: still('huxley-2014-original-drawing'),
   },
   {
     year: '2017',
-    title: 'Huxley Writing & Illustration',
-    text: 'The HUXLEY graphic novel continues to take shape, meticulously crafted page by page as the story unfolds.',
+    title: `${SITE_NAME} Writing & Illustration`,
+    text: `The ${SITE_NAME} graphic novel continues to take shape, meticulously crafted page by page as the story unfolds.`,
     image: still('huxley-2017-writing'),
   },
   {
     year: '2020',
-    title: 'Huxley Teaser MAX',
-    text: 'Early Huxley teaser trailer of MAX directed by Sava Zivkovic.',
+    title: `${SITE_NAME} Teaser MAX`,
+    text: `Early ${SITE_NAME} teaser trailer of MAX directed by Sava Zivkovic.`,
     image: still('huxley-2020-teaser-max'),
   },
   {
     year: '2022',
-    title: 'Huxley Cinematic Trailer',
-    text: 'Huxley cinematic trailer directed by Sava Zivkovic.',
+    title: `${SITE_NAME} Cinematic Trailer`,
+    text: `${SITE_NAME} cinematic trailer directed by Sava Zivkovic.`,
     image: still('huxley-2022-cinematic-trailer'),
   },
   {
     year: '2022',
-    title: 'Huxley Single Issues',
-    text: 'Original six-part digital comic series introducing Max, Kai, HUXLEY, FURY-7, and the machine-ruled wasteland. Limited edition author edition physicals.',
+    title: `${SITE_NAME} Single Issues`,
+    text: `Original six-part digital comic series introducing Max, Kai, ${SITE_NAME}, FURY-7, and the machine-ruled wasteland. Limited edition author edition physicals.`,
     image: still('huxley-2022-single-issues'),
   },
   {
     year: '2022',
-    title: 'Huxley Deluxe Editions',
-    text: 'Read-Only Memory hardcover and deluxe collector editions of the original HUXLEY graphic novel.',
+    title: `${SITE_NAME} Deluxe Editions`,
+    text: `Read-Only Memory hardcover and deluxe collector editions of the original ${SITE_NAME} graphic novel.`,
     image: still('huxley-2022-deluxe-editions'),
   },
   {
     year: '2024',
-    title: 'Huxley: The Oracle Trailer',
-    text: 'Main official cinematic trailer for the Oracle era of the HUXLEY universe directed by Syama Pedersen.',
+    title: `${SITE_NAME}: The Oracle Trailer`,
+    text: `Main official cinematic trailer for the Oracle era of the ${SITE_NAME} universe directed by Syama Pedersen.`,
     image: still('huxley-2024-oracle-trailer'),
   },
   {
     year: '2024',
-    title: 'Huxley Standard Editions',
-    text: 'Standard print edition of the original HUXLEY graphic novel released worldwide through Thames & Hudson, Amazon, and major bookstores.',
+    title: `${SITE_NAME} Standard Editions`,
+    text: `Standard print edition of the original ${SITE_NAME} graphic novel released worldwide through Thames & Hudson, Amazon, and major bookstores.`,
     image: still('huxley-2024-standard-editions'),
   },
   {
     year: '2025',
-    title: 'Huxley: The Oracle',
-    text: 'Read-Only Memory / Volume hardcover and deluxe collector editions of the first HUXLEY prequel book.',
+    title: `${SITE_NAME}: The Oracle`,
+    text: `Read-Only Memory / Volume hardcover and deluxe collector editions of the first ${SITE_NAME} prequel book.`,
     image: still('huxley-2025-the-oracle'),
   },
   {
     year: '2025',
-    title: 'Huxley: The Oracle Softcover',
-    text: 'Standard edition (softcover) of HUXLEY: The Oracle was globally released. It debuted through Amazon and bookstores.',
+    title: `${SITE_NAME}: The Oracle Softcover`,
+    text: `Standard edition (softcover) of ${SITE_NAME}: The Oracle was globally released. It debuted through Amazon and bookstores.`,
     image: still('huxley-2025-oracle-softcover'),
   },
   {
     year: '2027',
-    title: 'Huxley: Dreamwalkers',
-    text: 'Next major book release in the HUXLEY saga, continuing the first prequel arc.',
+    title: `${SITE_NAME}: Dreamwalkers`,
+    text: `Next major book release in the ${SITE_NAME} saga, continuing the first prequel arc.`,
     image: still('huxley-2027-dreamwalkers'),
     upcoming: true,
   },
   {
     year: '2028',
-    title: 'Huxley: Stormshield',
-    text: 'Next major book release in the HUXLEY saga, beginning the second prequel arc.',
+    title: `${SITE_NAME}: Stormshield`,
+    text: `Next major book release in the ${SITE_NAME} saga, beginning the second prequel arc.`,
     image: still('huxley-2028-stormshield'),
     upcoming: true,
   },
@@ -115,7 +116,7 @@ function RowThumb({ entry }: { entry: Entry }) {
 export default function AboutTimeline() {
   return (
     <section className="px-3 uppercase">
-      <SectionIntro title="Huxley Timeline" aside={`[${String(entries.length).padStart(2, '0')}]`} />
+      <SectionIntro title={`${SITE_NAME} Timeline`} />
 
       <motion.ol
         initial="hidden"

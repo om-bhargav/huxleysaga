@@ -18,7 +18,7 @@ const partners: { name: string; href: string }[] = [
 export default function AboutPartners() {
   return (
     <section className="overflow-hidden px-3 uppercase">
-      <SectionIntro title="Partners" aside={`[${String(partners.length).padStart(2, '0')}]`} />
+      <SectionIntro title="Partners" />
 
       <motion.div
         initial={{ opacity: 0 }}

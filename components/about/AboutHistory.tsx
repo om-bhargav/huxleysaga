@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // adjust path
 import { BracketButton } from '@/components/shared/BracketButton'; // adjust path
 import { SectionIntro, flicker } from '@/components/shared/SectionIntro'; // adjust path
+import { SITE_NAME } from '@/config';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -21,7 +22,7 @@ export default function AboutHistory() {
         <SectionIntro
           title="History"
           /* Placeholder copy: swap in your real text */
-          text="Huxley began as a single robot drawing in 2014 and has been built in public ever since, one book, trailer and edition at a time."
+          text={`${SITE_NAME} began as a single robot drawing in 2014 and has been built in public ever since, one book, trailer and edition at a time.`}
         />
 
         <div className="mt-12 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

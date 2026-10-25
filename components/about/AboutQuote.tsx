@@ -3,10 +3,11 @@
 import { motion } from 'framer-motion';
 import { Divider } from '@/components/shared/Divider'; // adjust path
 import { flicker, wordDelay } from '@/components/shared/SectionIntro'; // adjust path
+import { SITE_NAME } from '@/config';
 
 /* Placeholder copy: swap in the real pull-quote */
 const quote =
-  'Huxley is one of those rare worlds that feels lived in from the first page.';
+  `${SITE_NAME} is one of those rare worlds that feels lived in from the first page.`;
 const author = 'Nikita Buyanov';
 const role = 'Director of Escape from Tarkov';
 

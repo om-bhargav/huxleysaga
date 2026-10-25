@@ -1,6 +1,4 @@
 'use client';
-
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
 import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
@@ -158,7 +156,7 @@ function Characters({ world, comics, lead }: { world: World; comics: Universe[];
         name: c.name,
         alias: c.alias,
         description: c.copy,
-        images: [c.image],
+        images: c.images,
         stats: [
           ...(multiple ? [{ label: 'Appears in', value: universe.name }] : []),
           { label: 'Role', value: c.role },

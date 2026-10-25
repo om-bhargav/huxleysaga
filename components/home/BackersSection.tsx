@@ -20,6 +20,8 @@ type Testimonial = {
   image?: string | null;
 };
 
+const GRID = 'mt-12 grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
+
 /* Short bright ticks on the four corners of a card */
 function CornerTicks() {
   const tick = 'absolute h-px w-1.5 bg-foreground/40';
@@ -56,10 +58,54 @@ function TestimonialCard({ quote, name, campaign, image }: Testimonial) {
   );
 }
 
+/** Same frame as TestimonialCard, so the grid doesn't jump when the real cards arrive */
+function TestimonialSkeleton() {
+  const line = 'h-3 animate-pulse bg-white/5';
+  return (
+    <div aria-hidden="true" className="relative flex h-full min-h-[250px] flex-col border border-white/10 p-3">
+      <CornerTicks />
+
+      <div className="flex flex-col gap-2.5">
+        <div className={`${line} w-full`} />
+        <div className={`${line} w-11/12`} />
+        <div className={`${line} w-4/5`} />
+        <div className={`${line} w-3/5`} />
+      </div>
+
+      <div className="mt-auto pt-12">
+        <div className="h-5 w-1/2 animate-pulse bg-white/10" />
+        <div className="mt-2 h-3 w-2/5 animate-pulse bg-white/5" />
+      </div>
+    </div>
+  );
+}
+
+/** Shown when loading finished but nothing is published yet */
+function NoTestimonials() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.4 }}
+      transition={{ duration: 0.8, ease }}
+      className="relative mt-12 flex min-h-[250px] flex-col items-center justify-center gap-3 border border-white/10 p-5 text-center"
+    >
+      <CornerTicks />
+      <p className="text-lg tracking-wide lg:text-xl">Backer stories coming soon</p>
+      <p className="max-w-md text-xs leading-relaxed tracking-wider text-white/50 sm:text-sm">
+        Backed one of our campaigns? We&apos;d love to hear what you thought.
+      </p>
+    </motion.div>
+  );
+}
+
 /** Pass testimonials to skip fetching; otherwise the published ones come from /api/backer-testimonials */
 export default function BackersSection({ testimonials: testimonialsProp }: { testimonials?: Testimonial[] }) {
-  const { testimonials: published } = useTestimonials(testimonialsProp ? null : { published: true });
+  const { testimonials: published, isLoading } = useTestimonials(testimonialsProp ? null : { published: true });
   const testimonials = testimonialsProp ?? published;
+
+  const loading = !testimonialsProp && isLoading;
+  const empty = !loading && testimonials.length === 0;
 
   return (
     <section className="px-3 py-10 uppercase text-white">
@@ -78,9 +124,19 @@ export default function BackersSection({ testimonials: testimonialsProp }: { tes
         </p>
       </motion.div>
 
-      {/* The backer count stays up even before any testimonials are published */}
-      {testimonials.length > 0 && (
-        <ul className="mt-12 grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {loading ? (
+        /* Two skeletons on phones and tablets, a full row of four on desktop */
+        <ul role="status" aria-label="Loading testimonials" className={GRID}>
+          {Array.from({ length: 4 }, (_, i) => (
+            <li key={i} className={i > 1 ? 'hidden lg:block' : undefined}>
+              <TestimonialSkeleton />
+            </li>
+          ))}
+        </ul>
+      ) : empty ? (
+        <NoTestimonials />
+      ) : (
+        <ul className={GRID}>
           {testimonials.map((t, i) => (
             <motion.li
               key={t.id ?? i}

@@ -48,6 +48,8 @@ const toCard = (c: CampaignDTO): Campaign => ({
   button: { label: c.buttonLabel, href: c.buttonHref },
 });
 
+const CARD_WIDTH = 'w-full md:w-[min(86vw,480px)]';
+
 /** Label above value, in the same muted-key rhythm as the product cards */
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -58,7 +60,7 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CampaignCard({ campaign, className = 'w-full md:w-[min(86vw,480px)]' }: { campaign: Campaign; className?: string }) {
+function CampaignCard({ campaign, className = CARD_WIDTH }: { campaign: Campaign; className?: string }) {
   return (
     <GlitchScope>
       <article className={`flex shrink-0 flex-col border border-white/10 bg-neutral-950 text-white ${className}`}>
@@ -120,11 +122,66 @@ function CampaignCard({ campaign, className = 'w-full md:w-[min(86vw,480px)]' }:
           </div>
 
           <div className="mt-5 -ml-1">
-            <BracketButton label={campaign.button.label} href={campaign.button.href} />
+            <BracketButton target="_blank" label={campaign.button.label} href={campaign.button.href} />
           </div>
         </div>
       </article>
     </GlitchScope>
+  );
+}
+
+/** Same shape and size as CampaignCard, so nothing jumps when the real cards arrive */
+function CampaignSkeleton({ className = CARD_WIDTH }: { className?: string }) {
+  const bar = 'animate-pulse bg-white/10';
+  return (
+    <div aria-hidden="true" className={`flex shrink-0 flex-col border border-white/10 bg-neutral-950 ${className}`}>
+      <div className="aspect-3/2 animate-pulse bg-white/5" />
+
+      <div className="flex flex-1 flex-col p-3.5">
+        <div className={`h-6 w-2/3 ${bar}`} />
+        <div className="mt-3 h-3 w-full animate-pulse bg-white/5" />
+        <div className="mt-2 h-3 w-4/5 animate-pulse bg-white/5" />
+
+        <div className="mt-6 flex items-end justify-between">
+          <div className="h-3 w-14 animate-pulse bg-white/5" />
+          <div className={`h-5 w-12 ${bar}`} />
+        </div>
+        <div className="mt-2 h-1.5 bg-white/10" />
+
+        <div className="mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="flex flex-col gap-1.5">
+              <div className="h-3 w-1/2 animate-pulse bg-white/5" />
+              <div className={`h-4 w-3/4 ${bar}`} />
+            </div>
+          ))}
+        </div>
+
+        <div className={`mt-5 h-6 w-36 ${bar}`} />
+      </div>
+    </div>
+  );
+}
+
+/** Shown when the request finished but nothing is live */
+function NoCampaigns() {
+  return (
+    <motion.div
+      variants={cardReveal}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.4 }}
+      className="mt-10 flex min-h-56 flex-col justify-center gap-3 border border-white/10 bg-neutral-950 p-5 text-white sm:p-8"
+    >
+      <p className="flex items-center gap-2 text-[10px] tracking-widest text-white/40 sm:text-[11px]">
+        <span aria-hidden="true" className="size-1.5 bg-white/40" />
+        Offline
+      </p>
+      <p className="text-lg tracking-wide lg:text-2xl">No campaigns are live right now</p>
+      <p className="max-w-xl text-xs leading-relaxed tracking-wider text-white/40 sm:text-sm">
+        The next story is already in the works. Check back soon to back it first.
+      </p>
+    </motion.div>
   );
 }
 
@@ -140,7 +197,7 @@ function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
   const [active, setActive] = useState(0);
 
   return (
-    <div className="md:hidden md:grid">
+    <div className="md:hidden">
       <Swiper
         modules={[Autoplay]}
         onSwiper={setSwiper}
@@ -183,15 +240,20 @@ function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
  * Live campaigns. The heading flickers in word by word like the saga intro,
  * then the cards scroll past on a loop that stops under the cursor.
  * On phones the loop is replaced by a swipeable row.
+ *
+ * While loading, skeleton cards hold the space; if nothing is live, a short notice is shown.
  */
 export default function LiveCampaigns({
   title = 'Live Campaigns',
   /* Placeholder copy: swap in your real text */
   text = 'Three campaigns are live right now, each bringing a new story to life. Back your favourite, help turn ink and imagination into something real, and claim your edition before the final page turns.',
+  emptyText = 'Every story starts with a campaign. Nothing is live at the moment, but new worlds are always in the making.',
   campaigns: campaignsProp,
 }: {
   title?: string;
   text?: string;
+  /** Intro text used instead of `text` when no campaign is live */
+  emptyText?: string;
   /** Pass campaigns to skip fetching; otherwise the LIVE ones come from /api/campaigns */
   campaigns?: Campaign[];
 }) {
@@ -199,41 +261,62 @@ export default function LiveCampaigns({
   const { campaigns: live, isLoading } = useCampaigns(campaignsProp ? null : { status: 'LIVE' });
   const campaigns = campaignsProp ?? live.map(toCard);
 
-  /* Nothing live (or still loading): leave the section out rather than show an empty row */
-  if (!campaignsProp && (isLoading || campaigns.length === 0)) return null;
+  const loading = !campaignsProp && isLoading;
+  const empty = !loading && campaigns.length === 0;
 
   return (
     <section className="overflow-hidden px-3 py-10 uppercase">
-      <SectionIntro title={title} text={text} />
+      <SectionIntro title={title} text={empty ? emptyText : text} />
 
-      <motion.p
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.6 }}
-        variants={flicker}
-        custom={0.4}
-        className="mt-10 flex items-center gap-2 text-[10px] tracking-widest text-white/40 sm:text-[11px]"
-      >
-        <span aria-hidden="true" className="size-1 bg-white/40" />
-        <span className="md:hidden">Swipe to browse</span>
-        <span className="max-md:hidden">{reduceMotion ? 'Scroll the row to browse' : 'Hover to pause'}</span>
-      </motion.p>
+      {empty ? (
+        <NoCampaigns />
+      ) : (
+        <>
+          <motion.p
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.6 }}
+            variants={flicker}
+            custom={0.4}
+            className="mt-10 flex items-center gap-2 text-[10px] tracking-widest text-white/40 sm:text-[11px]"
+          >
+            <span aria-hidden="true" className="size-1 bg-white/40" />
+            {loading ? (
+              <span>Loading campaigns</span>
+            ) : (
+              <>
+                <span className="md:hidden">Swipe to browse</span>
+                <span className="max-md:hidden">{reduceMotion ? 'Scroll the row to browse' : 'Hover to pause'}</span>
+              </>
+            )}
+          </motion.p>
 
-      <motion.div
-        variants={cardReveal}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.2 }}
-        className="mt-3"
-      >
-        <CampaignSwiper campaigns={campaigns} />
+          {loading ? (
+            /* One skeleton on phones, a row of three on larger screens */
+            <div role="status" aria-label="Loading campaigns" className="mt-3 flex gap-3 overflow-hidden">
+              {Array.from({ length: 3 }, (_, i) => (
+                <CampaignSkeleton key={i} className={`${CARD_WIDTH} ${i > 0 ? 'max-md:hidden' : ''}`} />
+              ))}
+            </div>
+          ) : (
+            <motion.div
+              variants={cardReveal}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              className="mt-3"
+            >
+              <CampaignSwiper campaigns={campaigns} />
 
-        <Marquee className="-mx-3 max-md:hidden">
-          {campaigns.map((campaign) => (
-            <CampaignCard key={campaign.id} campaign={campaign} />
-          ))}
-        </Marquee>
-      </motion.div>
+              <Marquee className="-mx-3 max-md:hidden">
+                {campaigns.map((campaign) => (
+                  <CampaignCard key={campaign.id} campaign={campaign} />
+                ))}
+              </Marquee>
+            </motion.div>
+          )}
+        </>
+      )}
     </section>
   );
 }

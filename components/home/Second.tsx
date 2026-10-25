@@ -4,7 +4,6 @@ import { useRef } from 'react';
 import { motion, useScroll, useTransform, type Variants } from 'framer-motion';
 import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // adjust path
 import { BracketButton } from '@/components/shared/BracketButton'; // adjust path
-import { worlds } from '@/config/worlds'; // adjust path
 
 export type ShowcaseItem = {
   title: string;
@@ -13,29 +12,41 @@ export type ShowcaseItem = {
   button: { label: string; href: string };
 };
 
-const picsum = (seed: string) => `https://picsum.photos/seed/${seed}/1920/1080`;
-
-/* Placeholder copy: swap in your real text */
-
-
-/* Card copy per world; keys are the world slugs from config/worlds */
-const descriptions: Record<string, string> = {
-  'spy-files':
+/* One panel per world. Images come from /public/characters for now. */
+const spyFiles: ShowcaseItem = {
+  title: 'Spy Files',
+  description:
     'Step into a world of covert operations, hidden identities, and high-stakes missions. Follow elite agents as they uncover secrets buried deep within a global web of deception.',
-  'wild-west':
-    'Ride into a lawless frontier of outlaws, gunslingers, and dusty towns. In the Wild West, every trail has a story and every showdown could change your fate.',
-  'game-world':
-    'Enter worlds where every decision matters. From legendary heroes to dangerous quests, discover immersive stories and unforgettable adventures built for gamers.',
-  'fantasy-land':
-    'Enter a realm of legendary heroes, ancient magic, and twisted tournaments. In Fantasy Land, every battle is a test, and fate is never in your own hands.',
+  image: '/characters/agent-scarlett/1.png',
+  button: { label: 'Explore Spy Files', href: '/universes/spy-files' },
 };
 
-const defaultItems: ShowcaseItem[] = worlds.map((world,idx) => ({
-  title: world.label,
-  description: descriptions[world.slug] ?? world.line,
-  image: `/assets/poster-${idx + 1}.png`,
-  button: { label: `Explore ${world.label}`, href: `/universes/${world.slug}` },
-}));
+const wildWest: ShowcaseItem = {
+  title: 'Wild West',
+  description:
+    'Ride into a lawless frontier of outlaws, gunslingers, and dusty towns. In the Wild West, every trail has a story and every showdown could change your fate.',
+  image: '/characters/vipress/1.png',
+  button: { label: 'Explore Wild West', href: '/universes/wild-west' },
+};
+
+const gameWorld: ShowcaseItem = {
+  title: 'Game World',
+  description:
+    'Enter worlds where every decision matters. From legendary heroes to dangerous quests, discover immersive stories and unforgettable adventures built for gamers.',
+  image: '/characters/kat/4.png', // TODO: swap for Game World art
+  button: { label: 'Explore Game World', href: '/universes/game-world' },
+};
+
+const fantasyLand: ShowcaseItem = {
+  title: 'Fantasy Land',
+  description:
+    'Enter a realm of legendary heroes, ancient magic, and twisted tournaments. In Fantasy Land, every battle is a test, and fate is never in your own hands.',
+  image: '/characters/Dracona/1.png', // TODO: swap for Fantasy Land art
+  button: { label: 'Explore Fantasy Land', href: '/universes/fantasy-land' },
+};
+
+const defaultItems: ShowcaseItem[] = [spyFiles, wildWest, gameWorld, fantasyLand];
+
 /* Blinks on like a bad signal */
 const flicker: Variants = {
   hidden: { opacity: 0 },

@@ -1,27 +1,15 @@
 'use client';
-import { FiPlay } from 'react-icons/fi';
+import Link from 'next/link';
+import { FiArrowUpRight, FiPlay } from 'react-icons/fi';
 import { UniverseHeading } from '@/components/universes/UniverseTheme'; // adjust path
 import type { Universe } from '@/config/universes'; // adjust path
 import { RevealImage } from '@/components/shared/RevealImage'; // adjust path
-import { RevealVideo } from '@/components/shared/RevealVideo'; // adjust path
 import { Flicker } from '../shared/FlickerText';
 import Reveal3D from '../shared/Reveal3d';
 
 export function IntroVideo({ universe }: { universe: Universe }) {
-  /* Add `video?: string | VideoSource[]` to Universe['hero'] */
-  const video = universe.hero.video;
-
-  /* Overlays live inside the reveal, so they wipe in with the picture rather than sitting on black */
-  const overlays = (
-    <>
-      <div
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{ background: `linear-gradient(to top, var(--u-ink) 4%, transparent 60%)` }}
-      />
-      <div aria-hidden="true" className="absolute inset-0 bg-black/35" />
-    </>
-  );
+  /* The video isn't played here; it's only linked */
+  const videoHref = universe.hero.video;
 
   return (
     <section
@@ -30,32 +18,25 @@ export function IntroVideo({ universe }: { universe: Universe }) {
          which iOS Safari can let slip past overflow-hidden and cause sideways scroll */
       className="relative isolate h-svh min-h-[560px] w-full max-w-full overflow-hidden [contain:paint]"
     >
-      {/* Above the fold, so it plays on load instead of waiting to be scrolled into view */}
+      {/* Above the fold, so it reveals on load instead of waiting to be scrolled into view */}
       <div className="absolute inset-0 overflow-hidden">
-        {video ? (
-          <RevealVideo
-            src={video}
-            poster={universe.hero.poster}
-            direction="bottom-up"
-            trigger="mount"
-            priority
-            className="size-full"
-          >
-            {overlays}
-          </RevealVideo>
-        ) : (
-          <RevealImage
-            src={universe.hero.poster}
-            alt=""
-            direction="bottom-up"
-            trigger="mount"
-            priority
-            sizes="100vw"
-            className="size-full"
-          >
-            {overlays}
-          </RevealImage>
-        )}
+        <RevealImage
+          src={universe.hero.poster}
+          alt=""
+          direction="bottom-up"
+          trigger="mount"
+          priority
+          sizes="100vw"
+          className="size-full"
+        >
+          {/* Overlays live inside the reveal, so they wipe in with the picture rather than sitting on black */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(to top, var(--u-ink) 4%, transparent 60%)` }}
+          />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/35" />
+        </RevealImage>
       </div>
 
       <div className="absolute inset-x-0 bottom-0 z-10 min-w-0 p-3 pb-10 lg:p-8">
@@ -91,20 +72,31 @@ export function IntroVideo({ universe }: { universe: Universe }) {
           className="mt-4 max-w-[46ch] font-heading text-[11px] uppercase leading-relaxed tracking-widest opacity-80 sm:text-[13px]"
         />
 
-        {/* Placeholder marker, only while this universe has no video file yet */}
-        {!video && (
+        {/* Watch button: only when this universe has a video link. Blinks on last, opens the video in a new tab. */}
+        {videoHref && (
           <Flicker trigger="mount" delay={1.3} className="mt-6">
-            <p
-              className="inline-flex max-w-full items-center gap-2 border px-3 py-2 font-heading text-[10px] uppercase tracking-widest sm:text-[11px]"
-              style={{ borderColor: 'var(--u-accent)', color: 'var(--u-accent)' }}
+            <Link
+              href={videoHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative isolate inline-flex max-w-full items-center gap-2.5 overflow-hidden border border-[var(--u-accent)] px-3.5 py-2.5 font-heading text-[10px] uppercase tracking-widest text-[var(--u-accent)] transition-colors duration-300 hover:text-[var(--u-ink)] focus-visible:text-[var(--u-ink)] focus-visible:outline-none sm:text-[11px]"
             >
-              <FiPlay aria-hidden="true" className="size-3 shrink-0" />
-              Intro video — {universe.hero.videoNote}
-            </p>
+              {/* Accent fill wipes in from the left on hover */}
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 -z-10 origin-left scale-x-0 bg-[var(--u-accent)] transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:scale-x-100 group-focus-visible:scale-x-100"
+              />
+              <FiPlay aria-hidden="true" className="size-3 shrink-0 transition-transform duration-300 group-hover:scale-125" />
+              Watch the intro
+              <FiArrowUpRight
+                aria-hidden="true"
+                className="size-3 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+              />
+              <span className="sr-only">(opens in a new tab)</span>
+            </Link>
           </Flicker>
         )}
       </div>
     </section>
-
   );
 }

@@ -6,26 +6,31 @@ import SagaIntro from "../home/SagaIntro";
 import Second from "../home/Second";
 import Third from "../home/Third";
 import FinalCta from "../shared/FinalCTA";
+{/* <MeetTheUniverse/> */ }
+{/* <Fifth />✅ */ }
+{/* <Sixth />✅ */ }
+{/* <Seventh />✅ */ }
+{/* <Ninth />✅ */ }
+{/* <Tenth />✅ */ }
+{/* <Eleven />✅ */ }
 
 export default function Home() {
   return (
     <div className="grid gap-5">
-      <Hero video="/assets/hero.mp4" image="/assets/video-poster.png" /> {/* ✅ */}
+      <Hero videos={["/assets/hero.mp4", "/assets/hero-2.mp4"]} image="/assets/video-poster.png" /> {/* ✅ */}
       <div className="relative z-10 grid gap-5 bg-background">
         <LiveCampaigns />
-        <SagaIntro/>
+        <SagaIntro />
         <Second />
-        <Third />{/* ✅ */}
-        {/* <MeetTheUniverse/> */}
-        {/* <Fifth />✅ */}
-        {/* <Sixth />✅ */}
-        {/* <Seventh />✅ */}
-        <Eight />✅
-        <BackersSection/>
-        {/* <Ninth />✅ */}
-        {/* <Tenth />✅ */}
-        {/* <Eleven />✅ */}
-        <FinalCta images={["/assets/poster-1.png","/assets/poster-2.png","/assets/poster-3.png","/assets/poster-4.png"]}/>
+        <Third />
+        <Eight />
+        <BackersSection />
+        <FinalCta images={[
+          "/characters/agent-scarlett/1.png",
+          "/characters/vipress/1.png",
+          "/characters/kat/4.png",
+          "/characters/Dracona/1.png",
+        ]} />
       </div>
     </div>
   )

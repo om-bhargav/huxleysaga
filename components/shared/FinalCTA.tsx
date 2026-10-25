@@ -38,16 +38,19 @@ export default function FinalCta({
   images?: string[];
 }) {
   return (
-    <section className="px-3 pb-14 pt-5 uppercase text-white">
+    <section className="w-full overflow-x-clip px-3 pb-14 pt-5 uppercase text-white">
       <Divider />
 
-      <div className="relative mt-3 flex min-h-[70svh] flex-col justify-end overflow-hidden border border-white/10 p-3 sm:p-5">
+      <div className="relative mt-3 flex min-h-[70svh] w-full min-w-0 flex-col justify-end overflow-hidden border border-white/10 p-3 sm:p-5">
         {/* Visual: four images side by side (2×2 on phones) */}
-        <div aria-hidden="true" className="absolute inset-0 grid grid-cols-2 gap-px bg-white/10 lg:grid-cols-4">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-px bg-white/10 lg:grid-cols-4 lg:grid-rows-1"
+        >
           {Array.from({ length: 4 }, (_, i) => {
             const src = images[i];
             return (
-              <div key={i} className="relative overflow-hidden bg-black">
+              <div key={i} className="relative min-w-0 overflow-hidden bg-black">
                 {src && (
                   <Image
                     src={src}
@@ -64,21 +67,24 @@ export default function FinalCta({
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20" />
 
         {/* Content */}
-        <div className="relative">
-          <motion.p {...rise()} className="text-sm tracking-[0.25em] text-white/60">
+        <div className="relative w-full min-w-0">
+          <motion.p {...rise()} className="text-xs tracking-[0.2em] text-white/60 sm:text-sm sm:tracking-[0.25em]">
             The night is just getting started
           </motion.p>
 
-          <motion.div {...rise(0.1)} className="mt-3">
+          <motion.div {...rise(0.1)} className="mt-3 w-full min-w-0 overflow-hidden">
             <h2 className="sr-only">Night O’Clock</h2>
             <div aria-hidden="true">
-              <StretchText className="font-heading text-[12vw] leading-[0.8]">NIGHT O&apos;CLOCK</StretchText>
+              {/* Card has padding on both sides, so the word gets a touch less than the full 12vw on phones */}
+              <StretchText className="font-heading text-[10.5vw] leading-[0.85] sm:text-[12vw]">
+                NIGHT O&apos;CLOCK
+              </StretchText>
             </div>
           </motion.div>
 
-          <motion.ul {...rise(0.2)} className="mt-8 flex flex-wrap gap-x-6 gap-y-2">
+          <motion.ul {...rise(0.2)} className="mt-6 flex flex-wrap gap-x-4 gap-y-2 sm:mt-8 sm:gap-x-6">
             {ctas.map((cta) => (
-              <li key={cta.label}>
+              <li key={cta.label} className="max-w-full">
                 <BracketButton label={cta.label} href={cta.href} />
               </li>
             ))}

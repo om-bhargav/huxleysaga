@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { HoverGroup, HoverHighlight } from '@/components/shared/HoverHighlight'; // adjust path
 import { SectionIntro } from '@/components/shared/SectionIntro'; // adjust path
+import { SITE_NAME } from '@/config';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -10,36 +11,36 @@ type Feature = { outlet: string; title: string; href: string };
 
 /* TODO: drop in each article's real URL */
 const features: Feature[] = [
-  { outlet: 'IGN', title: 'Huxley: The Oracle', href: '#' },
+  { outlet: 'IGN', title: `${SITE_NAME}: The Oracle`, href: '#' },
   {
     outlet: 'Cartoon Brew',
     title:
-      "From 'Astartes' To 'Huxley': Ben Mauro And Digital Bones On Creating The Animated Trailer For 'The Oracle'",
+      `From 'Astartes' To '${SITE_NAME}': Ben Mauro And Digital Bones On Creating The Animated Trailer For 'The Oracle'`,
     href: '#',
   },
   {
     outlet: 'Military.com',
-    title: "Huxley: The Oracle Is an Origin Story for Ben Mauro's Epic Sci-Fi Universe",
+    title: `${SITE_NAME}: The Oracle Is an Origin Story for Ben Mauro's Epic Sci-Fi Universe`,
     href: '#',
   },
   {
     outlet: 'GameRant',
-    title: "Huxley: The Oracle Is an Origin Story for Ben Mauro's Epic Sci-Fi Universe",
+    title: `${SITE_NAME}: The Oracle Is an Origin Story for Ben Mauro's Epic Sci-Fi Universe`,
     href: '#',
   },
-  { outlet: 'Monkeys Fighting Robots', title: 'Sci-Fi Epic Huxley: The Oracle Available Now', href: '#' },
+  { outlet: 'Monkeys Fighting Robots', title: `Sci-Fi Epic ${SITE_NAME}: The Oracle Available Now`, href: '#' },
   {
     outlet: 'Business Wire',
     title:
-      "Ben Mauro's Sci-Fi Epic 'Huxley' Launches Globally with Hardcover & Softcover Editions; New Trailer & Prequel",
+      `Ben Mauro's Sci-Fi Epic '${SITE_NAME}' Launches Globally with Hardcover & Softcover Editions; New Trailer & Prequel`,
     href: '#',
   },
   {
     outlet: 'Space.com',
-    title: "Is Ben Mauro's 'Huxley' graphic novel universe the next big thing in sci-fi?",
+    title: `Is Ben Mauro's '${SITE_NAME}' graphic novel universe the next big thing in sci-fi?`,
     href: '#',
   },
-  { outlet: 'IGN', title: 'Huxley — Official Graphic Novel Trailer', href: '#' },
+  { outlet: 'IGN', title: `${SITE_NAME} — Official Graphic Novel Trailer`, href: '#' },
   {
     outlet: 'The Comic Crush',
     title: "Concept artist Ben Mauro's world-building comes to comics!",
@@ -47,17 +48,17 @@ const features: Feature[] = [
   },
   {
     outlet: 'Press Release Hub',
-    title: 'Ben Mauro Announces Early Deluxe Hardcover Release of Huxley: The Oracle, Featuring Exclusive Art',
+    title: `Ben Mauro Announces Early Deluxe Hardcover Release of ${SITE_NAME}: The Oracle, Featuring Exclusive Art`,
     href: '#',
   },
-  { outlet: 'Hypebeast', title: 'Huxley™: From Graphic Novel to Global Entertainment Franchise', href: '#' },
+  { outlet: 'Hypebeast', title: `${SITE_NAME}™: From Graphic Novel to Global Entertainment Franchise`, href: '#' },
 ];
 
 /** Press, as ruled rows: outlet, headline, and a view link out. */
 export default function AboutPress() {
   return (
     <section className="px-3 uppercase">
-      <SectionIntro title="Press" aside={`[${String(features.length).padStart(2, '0')}]`} />
+      <SectionIntro title="Press" />
 
       <motion.ul
         initial="hidden"
