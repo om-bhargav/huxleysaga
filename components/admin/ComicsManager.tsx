@@ -11,7 +11,6 @@ import {
   type FieldErrors,
   type UseFormRegister,
 } from 'react-hook-form';
-import { toast } from 'sonner';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -30,10 +29,20 @@ import {
 } from 'lucide-react';
 import { worlds, displayFontClass } from '@/config/worlds';
 import { createComic, deleteComic, updateComic, useComics } from '@/hooks/useComics';
-import { ApiError } from '@/lib/api/client';
 import { COMIC_DISPLAYS, type ComicDTO, type ComicDisplay, type ComicInput } from '@/lib/comics/types';
 import { cn } from '@/lib/utils';
-import { PageHeader } from './ui';
+import {
+  errorMessage,
+  fieldErrors,
+  removeRow,
+  replaceRow,
+  sortRows,
+  tempId,
+  useEditor,
+  useOptimisticList,
+  type Rejected,
+} from './optimistic';
+import { Bone, Loading, PageHeader, Saving, TabCount, times } from './ui';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -61,7 +70,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -88,8 +96,6 @@ const slugify = (value: string) =>
     .replace(/^the\s+/, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-
-const message = (error: unknown, fallback: string) => (error instanceof Error ? error.message : fallback);
 
 /* ---------- Form model ---------- */
 
@@ -165,6 +171,35 @@ const toInput = (v: FormValues): ComicInput => ({
   face: v.hasFace ? v.face : null,
   direction: v.direction,
 });
+
+/** The card to show until the server answers */
+const toOptimistic = (input: ComicInput, id: string, current?: ComicDTO): ComicDTO => {
+  const now = new Date().toISOString();
+  return {
+    id,
+    slug: input.slug,
+    name: input.name,
+    overline: input.overline ?? null,
+    shortName: input.shortName,
+    genre: input.genre,
+    hook: input.hook,
+    worldSlug: input.worldSlug ?? null,
+    display: input.display ?? 'stencil',
+    palette: input.palette,
+    direction: { type: '', motion: '', cursor: '', reveal: '', gallery: '', ...input.direction },
+    hero: input.hero,
+    story: input.story,
+    gallery: { title: input.gallery.title, note: input.gallery.note ?? null, images: input.gallery.images ?? [] },
+    face: input.face ?? null,
+    cta: input.cta,
+    signup: input.signup,
+    published: input.published ?? true,
+    sortOrder: input.sortOrder ?? 0,
+    counts: current?.counts ?? { characters: 0, campaigns: 0 },
+    createdAt: current?.createdAt ?? now,
+    updatedAt: now,
+  };
+};
 
 /* Which editor tab each field lives on, so a failed save can jump to the right one */
 const SECTIONS = [
@@ -387,10 +422,23 @@ function CtaButtonsEditor({ control, register, errors }: FieldProps & { control:
 
 /* ---------- Editor ---------- */
 
-function ComicForm({ comic, world, onDone }: { comic?: ComicDTO; world?: string; onDone: () => void }) {
-  const [section, setSection] = useState<SectionId>('basics');
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [serverErrorKeys, setServerErrorKeys] = useState<string[]>([]);
+function ComicForm({
+  comic,
+  world,
+  rejected,
+  onSave,
+  onCancel,
+}: {
+  comic?: ComicDTO;
+  world?: string;
+  /** A save the server turned down, to pick up where it left off */
+  rejected?: Rejected<FormValues>;
+  onSave: (values: FormValues) => void;
+  onCancel: () => void;
+}) {
+  /* Fields the server complained about, flagged on their tabs; the first such tab opens */
+  const [serverErrorKeys] = useState(() => (rejected ? Object.keys(fieldErrors(rejected.error)) : []));
+  const [section, setSection] = useState<SectionId>(() => sectionsWithErrors(serverErrorKeys)[0] ?? 'basics');
   const {
     register,
     handleSubmit,
@@ -398,7 +446,7 @@ function ComicForm({ comic, world, onDone }: { comic?: ComicDTO; world?: string;
     setValue,
     getFieldState,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ defaultValues: toFormValues(comic, world) });
+  } = useForm<FormValues>({ defaultValues: rejected?.values ?? toFormValues(comic, world) });
 
   const hasFace = useWatch({ control, name: 'hasFace' });
   const [posterUrl, storyImage] = useWatch({ control, name: ['hero.poster', 'story.image'] });
@@ -406,22 +454,7 @@ function ComicForm({ comic, world, onDone }: { comic?: ComicDTO; world?: string;
   const flagged = new Set([...sectionsWithErrors(Object.keys(errors)), ...sectionsWithErrors(serverErrorKeys)]);
 
   const onSubmit = handleSubmit(
-    async (values) => {
-      setServerError(null);
-      setServerErrorKeys([]);
-      try {
-        const input = toInput(values);
-        const result = comic ? await updateComic(comic.id, input) : await createComic(input);
-        toast.success(result.message);
-        onDone();
-      } catch (error) {
-        const keys = error instanceof ApiError && error.data ? Object.keys(error.data as object) : [];
-        setServerErrorKeys(keys);
-        setServerError(message(error, 'Could not reach the server'));
-        const first = sectionsWithErrors(keys)[0];
-        if (first) setSection(first);
-      }
-    },
+    onSave,
     /* Client-side problems: open the first tab that has one */
     (invalid) => {
       const first = sectionsWithErrors(Object.keys(invalid))[0];
@@ -442,295 +475,306 @@ function ComicForm({ comic, world, onDone }: { comic?: ComicDTO; world?: string;
 
   return (
     <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-      <Tabs value={section} onValueChange={(v) => setSection(v as SectionId)} className="min-h-0 flex-1 gap-0">
-        <div className="border-b px-4 py-2">
-          <TabsList variant="line" className="h-auto flex-wrap justify-start">
-            {SECTIONS.map((s) => (
-              <TabsTrigger key={s.id} value={s.id} className="flex-none px-2">
-                {s.label}
-                {flagged.has(s.id) && <span className="size-1.5 rounded-full bg-destructive" aria-label="has errors" />}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+      <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <Tabs value={section} onValueChange={(v) => setSection(v as SectionId)} className="min-h-0 flex-1 gap-0">
+          <div className="border-b px-4 py-2">
+            <TabsList variant="line" className="h-auto flex-wrap justify-start">
+              {SECTIONS.map((s) => (
+                <TabsTrigger key={s.id} value={s.id} className="flex-none px-2">
+                  {s.label}
+                  {flagged.has(s.id) && <span className="size-1.5 rounded-full bg-destructive" aria-label="has errors" />}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
-          {serverError && (
-            <Alert variant="destructive" className="mb-5">
-              <TriangleAlertIcon />
-              <AlertTitle>Couldn&apos;t save</AlertTitle>
-              <AlertDescription>{serverError}</AlertDescription>
-            </Alert>
-          )}
+          <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
+            {rejected && (
+              <Alert variant="destructive" className="mb-5">
+                <TriangleAlertIcon />
+                <AlertTitle>Couldn&apos;t save</AlertTitle>
+                <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
+              </Alert>
+            )}
 
-          {/* keepMounted: hidden tabs still validate and keep their values */}
-          <TabsContent value="basics" keepMounted>
-            <FieldGroup>
-              <Field data-invalid={!!errors.name}>
-                <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input id="name" placeholder="The Boundless Loop" aria-invalid={!!errors.name} {...nameField} />
-                <FieldError errors={[errors.name]} />
-              </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+            {/* keepMounted: hidden tabs still validate and keep their values */}
+            <TabsContent value="basics" keepMounted>
+              <FieldGroup>
+                <Field data-invalid={!!errors.name}>
+                  <FieldLabel htmlFor="name">Name</FieldLabel>
+                  <Input id="name" placeholder="The Boundless Loop" aria-invalid={!!errors.name} {...nameField} />
+                  <FieldError errors={[errors.name]} />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TextField
+                    label="Slug"
+                    name="slug"
+                    register={register}
+                    error={errors.slug}
+                    required="Slug is required"
+                    placeholder="boundless-loop"
+                    description={comic ? 'Changing it moves the page. Links from characters and campaigns follow.' : 'The page address, e.g. /boundless-loop'}
+                  />
+                  <TextField
+                    label="Short name"
+                    name="shortName"
+                    register={register}
+                    error={errors.shortName}
+                    required="Short name is required"
+                    placeholder="Boundless Loop"
+                    description="For the nav and cards."
+                  />
+                </div>
+                <TextField label="Overline" name="overline" register={register} placeholder="The Kat Chronicle" description="Optional. Sits above the name." />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel>World</FieldLabel>
+                    <Controller
+                      control={control}
+                      name="worldSlug"
+                      render={({ field }) => (
+                        <Select items={worldItems} value={field.value} onValueChange={(v) => field.onChange(v)} disabled={isSubmitting}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(worldItems).map(([slug, label]) => (
+                              <SelectItem key={slug} value={slug}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    <FieldDescription>From config/worlds.</FieldDescription>
+                  </Field>
+                  <TextField label="Genre" name="genre" register={register} error={errors.genre} required="Genre is required" placeholder="Gaming" />
+                </div>
                 <TextField
-                  label="Slug"
-                  name="slug"
+                  label="Hook"
+                  name="hook"
                   register={register}
-                  error={errors.slug}
-                  required="Slug is required"
-                  placeholder="boundless-loop"
-                  description={comic ? 'Changing it moves the page. Links from characters and campaigns follow.' : 'The page address, e.g. /boundless-loop'}
+                  error={errors.hook}
+                  required="Hook is required"
+                  placeholder="The perfect world you designed becomes your prison."
                 />
-                <TextField
-                  label="Short name"
-                  name="shortName"
-                  register={register}
-                  error={errors.shortName}
-                  required="Short name is required"
-                  placeholder="Boundless Loop"
-                  description="For the nav and cards."
-                />
-              </div>
-              <TextField label="Overline" name="overline" register={register} placeholder="The Kat Chronicle" description="Optional. Sits above the name." />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field>
-                  <FieldLabel>World</FieldLabel>
+                <div className="grid items-start gap-4 sm:grid-cols-2">
                   <Controller
                     control={control}
-                    name="worldSlug"
+                    name="published"
                     render={({ field }) => (
-                      <Select items={worldItems} value={field.value} onValueChange={(v) => field.onChange(v)}>
+                      <FieldLabel htmlFor="published">
+                        <Field orientation="horizontal">
+                          <FieldContent>
+                            <span className="font-medium">Published</span>
+                            <FieldDescription>Show it on the site.</FieldDescription>
+                          </FieldContent>
+                          <Switch id="published" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                        </Field>
+                      </FieldLabel>
+                    )}
+                  />
+                  <Field>
+                    <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
+                    <Input id="sortOrder" type="number" {...register('sortOrder')} />
+                    <FieldDescription>Lower shows first within its world.</FieldDescription>
+                  </Field>
+                </div>
+              </FieldGroup>
+            </TabsContent>
+
+            <TabsContent value="look" keepMounted>
+              <FieldGroup>
+                <LookPreview control={control} />
+                <Field>
+                  <FieldLabel>Display face</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="display"
+                    render={({ field }) => (
+                      <Select items={displayItems} value={field.value} onValueChange={(v) => field.onChange(v)} disabled={isSubmitting}>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(worldItems).map(([slug, label]) => (
-                            <SelectItem key={slug} value={slug}>
-                              {label}
+                          {COMIC_DISPLAYS.map((d) => (
+                            <SelectItem key={d} value={d}>
+                              <span className={cn('text-base', displayFontClass[d])}>Aa</span>
+                              {displayItems[d]}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     )}
                   />
-                  <FieldDescription>From config/worlds.</FieldDescription>
                 </Field>
-                <TextField label="Genre" name="genre" register={register} error={errors.genre} required="Genre is required" placeholder="Gaming" />
-              </div>
-              <TextField
-                label="Hook"
-                name="hook"
-                register={register}
-                error={errors.hook}
-                required="Hook is required"
-                placeholder="The perfect world you designed becomes your prison."
-              />
-              <div className="grid items-start gap-4 sm:grid-cols-2">
+                <FieldSet>
+                  <FieldLegend variant="label">Palette</FieldLegend>
+                  <FieldDescription>Ink is the page ground, paper the text on it.</FieldDescription>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <ColorField label="Ink" name="palette.ink" control={control} />
+                    <ColorField label="Paper" name="palette.paper" control={control} />
+                    <ColorField label="Accent" name="palette.accent" control={control} />
+                    <ColorField label="Soft accent" name="palette.accentSoft" control={control} />
+                  </div>
+                </FieldSet>
+              </FieldGroup>
+            </TabsContent>
+
+            <TabsContent value="story" keepMounted>
+              <FieldGroup>
+                <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed bg-muted/30">
+                  {posterUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={posterUrl} alt="" className="absolute inset-0 size-full object-cover" />
+                  ) : (
+                    <span className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Hero poster</span>
+                  )}
+                </div>
+                <TextField
+                  label="Hero poster"
+                  name="hero.poster"
+                  register={register}
+                  error={errors.hero?.poster}
+                  required="Hero poster is required"
+                  placeholder="https://… or /assets/…"
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TextField label="Hero video" name="hero.video" register={register} placeholder="/assets/venom.mp4" description="Optional." />
+                  <TextField label="Video note" name="hero.videoNote" register={register} placeholder="Video → story snippets → …" />
+                </div>
+                <TextField
+                  label="Story headline"
+                  name="story.headline"
+                  register={register}
+                  error={errors.story?.headline}
+                  required="Story headline is required"
+                />
+                <TextField label="Story" name="story.text" register={register} error={errors.story?.text} required="Story is required" multiline />
+                <TextField label="More story" name="story.more" register={register} multiline description="Optional second paragraph." />
+                <div className="flex items-end gap-3">
+                  <TextField label="Story image" name="story.image" register={register} description="Optional." className="flex-1" />
+                  {storyImage && (
+                    <div className="relative mb-6 size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={storyImage} alt="" className="absolute inset-0 size-full object-cover" />
+                    </div>
+                  )}
+                </div>
+              </FieldGroup>
+            </TabsContent>
+
+            <TabsContent value="gallery" keepMounted>
+              <FieldGroup>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TextField
+                    label="Gallery title"
+                    name="gallery.title"
+                    register={register}
+                    error={errors.gallery?.title}
+                    required="Gallery title is required"
+                    placeholder="A Taste of What's Inside"
+                  />
+                  <TextField label="Note" name="gallery.note" register={register} description="Optional, for the team." />
+                </div>
+                <GalleryEditor control={control} register={register} errors={errors} />
+              </FieldGroup>
+            </TabsContent>
+
+            <TabsContent value="cta" keepMounted>
+              <FieldGroup>
+                <TextField
+                  label="CTA headline"
+                  name="cta.headline"
+                  register={register}
+                  error={errors.cta?.headline}
+                  required="CTA headline is required"
+                  placeholder="They took the gold. Now take home the story."
+                />
+                <CtaButtonsEditor control={control} register={register} errors={errors} />
+                <TextField
+                  label="Signup line"
+                  name="signupLine"
+                  register={register}
+                  error={errors.signupLine}
+                  required="Signup line is required"
+                  placeholder="Ride with us. Get the next drop first."
+                />
+
                 <Controller
                   control={control}
-                  name="published"
+                  name="hasFace"
                   render={({ field }) => (
-                    <FieldLabel htmlFor="published">
+                    <FieldLabel htmlFor="hasFace">
                       <Field orientation="horizontal">
                         <FieldContent>
-                          <span className="font-medium">Published</span>
-                          <FieldDescription>Show it on the site.</FieldDescription>
+                          <span className="font-medium">Collaborator</span>
+                          <FieldDescription>A real face behind the comic, e.g. a model or co-creator.</FieldDescription>
                         </FieldContent>
-                        <Switch id="published" checked={field.value} onCheckedChange={field.onChange} />
+                        <Switch id="hasFace" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                       </Field>
                     </FieldLabel>
                   )}
                 />
-                <Field>
-                  <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
-                  <Input id="sortOrder" type="number" {...register('sortOrder')} />
-                  <FieldDescription>Lower shows first within its world.</FieldDescription>
-                </Field>
-              </div>
-            </FieldGroup>
-          </TabsContent>
-
-          <TabsContent value="look" keepMounted>
-            <FieldGroup>
-              <LookPreview control={control} />
-              <Field>
-                <FieldLabel>Display face</FieldLabel>
-                <Controller
-                  control={control}
-                  name="display"
-                  render={({ field }) => (
-                    <Select items={displayItems} value={field.value} onValueChange={(v) => field.onChange(v)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COMIC_DISPLAYS.map((d) => (
-                          <SelectItem key={d} value={d}>
-                            <span className={cn('text-base', displayFontClass[d])}>Aa</span>
-                            {displayItems[d]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
-              <FieldSet>
-                <FieldLegend variant="label">Palette</FieldLegend>
-                <FieldDescription>Ink is the page ground, paper the text on it.</FieldDescription>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <ColorField label="Ink" name="palette.ink" control={control} />
-                  <ColorField label="Paper" name="palette.paper" control={control} />
-                  <ColorField label="Accent" name="palette.accent" control={control} />
-                  <ColorField label="Soft accent" name="palette.accentSoft" control={control} />
-                </div>
-              </FieldSet>
-            </FieldGroup>
-          </TabsContent>
-
-          <TabsContent value="story" keepMounted>
-            <FieldGroup>
-              <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed bg-muted/30">
-                {posterUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={posterUrl} alt="" className="absolute inset-0 size-full object-cover" />
-                ) : (
-                  <span className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Hero poster</span>
-                )}
-              </div>
-              <TextField
-                label="Hero poster"
-                name="hero.poster"
-                register={register}
-                error={errors.hero?.poster}
-                required="Hero poster is required"
-                placeholder="https://… or /assets/…"
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <TextField label="Hero video" name="hero.video" register={register} placeholder="/assets/venom.mp4" description="Optional." />
-                <TextField label="Video note" name="hero.videoNote" register={register} placeholder="Video → story snippets → …" />
-              </div>
-              <TextField
-                label="Story headline"
-                name="story.headline"
-                register={register}
-                error={errors.story?.headline}
-                required="Story headline is required"
-              />
-              <TextField label="Story" name="story.text" register={register} error={errors.story?.text} required="Story is required" multiline />
-              <TextField label="More story" name="story.more" register={register} multiline description="Optional second paragraph." />
-              <div className="flex items-end gap-3">
-                <TextField label="Story image" name="story.image" register={register} description="Optional." className="flex-1" />
-                {storyImage && (
-                  <div className="relative mb-6 size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={storyImage} alt="" className="absolute inset-0 size-full object-cover" />
+                {hasFace && (
+                  <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
+                    <TextField label="Name" name="face.name" register={register} error={errors.face?.name} required="Name is required" />
+                    <TextField label="Tag" name="face.tag" register={register} error={errors.face?.tag} required="Tag is required" placeholder="Collaborator" />
+                    <TextField
+                      label="Bio"
+                      name="face.bio"
+                      register={register}
+                      error={errors.face?.bio}
+                      required="Bio is required"
+                      multiline
+                      className="sm:col-span-2"
+                    />
+                    <TextField label="Link" name="face.href" register={register} error={errors.face?.href} required="Link is required" />
+                    <TextField label="Image" name="face.image" register={register} error={errors.face?.image} required="Image is required" />
                   </div>
                 )}
-              </div>
-            </FieldGroup>
-          </TabsContent>
+              </FieldGroup>
+            </TabsContent>
 
-          <TabsContent value="gallery" keepMounted>
-            <FieldGroup>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <TextField
-                  label="Gallery title"
-                  name="gallery.title"
-                  register={register}
-                  error={errors.gallery?.title}
-                  required="Gallery title is required"
-                  placeholder="A Taste of What's Inside"
-                />
-                <TextField label="Note" name="gallery.note" register={register} description="Optional, for the team." />
-              </div>
-              <GalleryEditor control={control} register={register} errors={errors} />
-            </FieldGroup>
-          </TabsContent>
+            <TabsContent value="notes" keepMounted>
+              <FieldGroup>
+                <FieldDescription>Design-direction notes for the team. None of these show on the site.</FieldDescription>
+                <TextField label="Type" name="direction.type" register={register} multiline />
+                <TextField label="Motion" name="direction.motion" register={register} multiline />
+                <TextField label="Cursor" name="direction.cursor" register={register} multiline />
+                <TextField label="Character reveal" name="direction.reveal" register={register} multiline />
+                <TextField label="Gallery treatment" name="direction.gallery" register={register} multiline />
+              </FieldGroup>
+            </TabsContent>
+          </div>
+        </Tabs>
 
-          <TabsContent value="cta" keepMounted>
-            <FieldGroup>
-              <TextField
-                label="CTA headline"
-                name="cta.headline"
-                register={register}
-                error={errors.cta?.headline}
-                required="CTA headline is required"
-                placeholder="They took the gold. Now take home the story."
-              />
-              <CtaButtonsEditor control={control} register={register} errors={errors} />
-              <TextField
-                label="Signup line"
-                name="signupLine"
-                register={register}
-                error={errors.signupLine}
-                required="Signup line is required"
-                placeholder="Ride with us. Get the next drop first."
-              />
-
-              <Controller
-                control={control}
-                name="hasFace"
-                render={({ field }) => (
-                  <FieldLabel htmlFor="hasFace">
-                    <Field orientation="horizontal">
-                      <FieldContent>
-                        <span className="font-medium">Collaborator</span>
-                        <FieldDescription>A real face behind the comic, e.g. a model or co-creator.</FieldDescription>
-                      </FieldContent>
-                      <Switch id="hasFace" checked={field.value} onCheckedChange={field.onChange} />
-                    </Field>
-                  </FieldLabel>
-                )}
-              />
-              {hasFace && (
-                <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
-                  <TextField label="Name" name="face.name" register={register} error={errors.face?.name} required="Name is required" />
-                  <TextField label="Tag" name="face.tag" register={register} error={errors.face?.tag} required="Tag is required" placeholder="Collaborator" />
-                  <TextField
-                    label="Bio"
-                    name="face.bio"
-                    register={register}
-                    error={errors.face?.bio}
-                    required="Bio is required"
-                    multiline
-                    className="sm:col-span-2"
-                  />
-                  <TextField label="Link" name="face.href" register={register} error={errors.face?.href} required="Link is required" />
-                  <TextField label="Image" name="face.image" register={register} error={errors.face?.image} required="Image is required" />
-                </div>
-              )}
-            </FieldGroup>
-          </TabsContent>
-
-          <TabsContent value="notes" keepMounted>
-            <FieldGroup>
-              <FieldDescription>Design-direction notes for the team. None of these show on the site.</FieldDescription>
-              <TextField label="Type" name="direction.type" register={register} multiline />
-              <TextField label="Motion" name="direction.motion" register={register} multiline />
-              <TextField label="Cursor" name="direction.cursor" register={register} multiline />
-              <TextField label="Character reveal" name="direction.reveal" register={register} multiline />
-              <TextField label="Gallery treatment" name="direction.gallery" register={register} multiline />
-            </FieldGroup>
-          </TabsContent>
-        </div>
-      </Tabs>
-
-      <SheetFooter className="flex-row justify-end border-t">
-        <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : comic ? 'Save changes' : 'Create comic'}
-        </Button>
-      </SheetFooter>
+        <SheetFooter className="flex-row justify-end border-t">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit">{comic ? 'Save changes' : 'Create comic'}</Button>
+        </SheetFooter>
+      </fieldset>
     </form>
   );
 }
 
 /* ---------- List ---------- */
 
-function ComicCard({ comic, onEdit, onDelete }: { comic: ComicDTO; onEdit: () => void; onDelete: () => void }) {
+function ComicCard({
+  comic,
+  pending,
+  onEdit,
+  onDelete,
+}: {
+  comic: ComicDTO;
+  /** Its change is with the server: the card is locked until it answers */
+  pending: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const { palette } = comic;
   const stats = [
     { label: 'Characters', value: comic.counts.characters, Icon: UsersIcon },
@@ -739,7 +783,7 @@ function ComicCard({ comic, onEdit, onDelete }: { comic: ComicDTO; onEdit: () =>
   ];
 
   return (
-    <Card className={cn('group gap-0 py-0', !comic.published && 'opacity-60')}>
+    <Card inert={pending} className={cn('group gap-0 py-0', (!comic.published || pending) && 'opacity-60')}>
       <button type="button" onClick={onEdit} className="relative aspect-video overflow-hidden text-left">
         <Image
           src={comic.hero.poster}
@@ -790,29 +834,33 @@ function ComicCard({ comic, onEdit, onDelete }: { comic: ComicDTO; onEdit: () =>
           ))}
           <span className="ml-1.5 text-xs text-muted-foreground">/{comic.slug}</span>
         </div>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="View on site"
-            nativeButton={false}
-            render={<a href={`/${comic.slug}`} target="_blank" rel="noreferrer" />}
-          >
-            <ExternalLinkIcon />
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Edit" onClick={onEdit}>
-            <PencilIcon />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Delete"
-            className="hover:bg-destructive/10 hover:text-destructive"
-            onClick={onDelete}
-          >
-            <Trash2Icon />
-          </Button>
-        </div>
+        {pending ? (
+          <Saving className="h-7" />
+        ) : (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="View on site"
+              nativeButton={false}
+              render={<a href={`/${comic.slug}`} target="_blank" rel="noreferrer" />}
+            >
+              <ExternalLinkIcon />
+            </Button>
+            <Button variant="ghost" size="icon-sm" aria-label="Edit" onClick={onEdit}>
+              <PencilIcon />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Delete"
+              className="hover:bg-destructive/10 hover:text-destructive"
+              onClick={onDelete}
+            >
+              <Trash2Icon />
+            </Button>
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
@@ -820,16 +868,78 @@ function ComicCard({ comic, onEdit, onDelete }: { comic: ComicDTO; onEdit: () =>
 
 const GRID = 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3';
 
+/** Same frame as ComicCard, so nothing jumps when the data lands */
+function ComicCardSkeleton({ wide }: { wide?: boolean }) {
+  return (
+    <Card className="gap-0 py-0">
+      <div className="relative aspect-video">
+        <Bone className="absolute inset-0 rounded-none" />
+        <Bone className="absolute left-3 top-3 h-5 w-16 rounded-full" />
+        <div className="absolute inset-x-4 bottom-3 space-y-2">
+          <Bone className="h-2.5 w-24" />
+          <Bone className={cn('h-7', wide ? 'w-3/4' : 'w-1/2')} />
+        </div>
+      </div>
+      <CardContent className="space-y-4 p-4">
+        <div className="min-h-10 space-y-2 py-0.5">
+          <Bone className="h-3.5 w-full" />
+          <Bone className="h-3.5 w-2/3" />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {times(3, (i) => (
+            <div key={i} className="flex flex-col items-center gap-1.5 rounded-lg bg-muted/50 px-2 py-2.5">
+              <Bone className="h-4 w-8" />
+              <Bone className="h-2.5 w-14" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter className="justify-between gap-2 border-t py-2">
+        <div className="flex items-center gap-1">
+          {times(4, (i) => (
+            <Bone key={i} className="size-3.5 rounded-full" />
+          ))}
+          <Bone className="ml-1.5 h-3 w-20" />
+        </div>
+        <div className="flex gap-1">
+          {times(3, (i) => (
+            <Bone key={i} className="size-7" />
+          ))}
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
+const CardsSkeleton = ({ count }: { count: number }) => (
+  <div className={GRID}>{times(count, (i) => <ComicCardSkeleton key={i} wide={i % 2 === 0} />)}</div>
+);
+
+/** A world's heading and its button: they come from config/worlds, so they show while comics load */
+function WorldHeading({ world, onAdd }: { world: (typeof worlds)[number]; onAdd: () => void }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className={cn('text-3xl', displayFontClass[world.display])}>{world.label}</h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{world.line}</p>
+      </div>
+      <Button variant="outline" size="sm" onClick={onAdd}>
+        <PlusIcon /> Add to {world.label}
+      </Button>
+    </div>
+  );
+}
+
 /* ---------- Page ---------- */
 
 const ALL = 'all';
 
 export default function ComicsManager() {
   const { comics, error, isLoading, isValidating, refresh } = useComics();
+  const { run, isPending } = useOptimisticList(refresh);
+  const { editor, open, close, closeForSave, reopen } = useEditor<ComicDTO, FormValues>();
   const [tab, setTab] = useState(ALL);
   const [query, setQuery] = useState('');
-  /* undefined = sheet closed, 'new' = create, otherwise the comic being edited */
-  const [editing, setEditing] = useState<ComicDTO | 'new'>();
   /* World a new comic starts in */
   const [newWorld, setNewWorld] = useState<string>();
   const [deleting, setDeleting] = useState<ComicDTO | null>(null);
@@ -846,24 +956,36 @@ export default function ComicsManager() {
 
   const startNew = (world?: string) => {
     setNewWorld(world ?? (tab === ALL ? undefined : tab));
-    setEditing('new');
+    open();
   };
 
-  const onDelete = async () => {
+  /* Every change lands in the list straight away and rolls back if the server says no */
+
+  const onSave = (comic: ComicDTO | undefined, values: FormValues) => {
+    /* A double click submits twice: only the first one is sent */
+    if (!closeForSave()) return;
+    const input = toInput(values);
+    const row = toOptimistic(input, comic?.id ?? tempId(), comic);
+    void run({
+      id: row.id,
+      update: (list) => sortRows(comic ? replaceRow(list, row) : [...list, row], 'asc'),
+      request: () => (comic ? updateComic(comic.id, input) : createComic(input)),
+      onError: (e) => reopen(comic, values, e),
+    });
+  };
+
+  const onDelete = () => {
     if (!deleting) return;
-    try {
-      const { message: text } = await deleteComic(deleting.id);
-      toast.success(text);
-    } catch (e) {
-      toast.error(message(e, 'Could not delete'));
-    } finally {
-      setDeleting(null);
-    }
+    const { id } = deleting;
+    setDeleting(null);
+    void run({ id, update: (list) => removeRow(list, id), request: () => deleteComic(id), failure: 'Could not delete' });
   };
 
   const card = (c: ComicDTO) => (
-    <ComicCard key={c.id} comic={c} onEdit={() => setEditing(c)} onDelete={() => setDeleting(c)} />
+    <ComicCard key={c.id} comic={c} pending={isPending(c.id)} onEdit={() => open(c)} onDelete={() => setDeleting(c)} />
   );
+
+  const editing = editor?.item;
 
   /* "All" without a search: one section per world, in config/worlds order */
   const grouped = tab === ALL && !q;
@@ -883,12 +1005,22 @@ export default function ComicsManager() {
       </Alert>
     );
   } else if (isLoading) {
+    /* Same layout the data will fill: world sections when grouped, one grid otherwise */
     body = (
-      <div className={GRID}>
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-96 rounded-xl" />
-        ))}
-      </div>
+      <Loading label="Loading comics">
+        {grouped ? (
+          <div className="space-y-12">
+            {worlds.map((w) => (
+              <section key={w.slug}>
+                <WorldHeading world={w} onAdd={() => startNew(w.slug)} />
+                <CardsSkeleton count={2} />
+              </section>
+            ))}
+          </div>
+        ) : (
+          <CardsSkeleton count={3} />
+        )}
+      </Loading>
     );
   } else if (grouped) {
     const unassigned = inWorld(NO_WORLD);
@@ -898,15 +1030,7 @@ export default function ComicsManager() {
           const list = inWorld(w.slug);
           return (
             <section key={w.slug}>
-              <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className={cn('text-3xl', displayFontClass[w.display])}>{w.label}</h2>
-                  <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{w.line}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => startNew(w.slug)}>
-                  <PlusIcon /> Add to {w.label}
-                </Button>
-              </div>
+              <WorldHeading world={w} onAdd={() => startNew(w.slug)} />
               {list.length ? (
                 <div className={GRID}>{list.map(card)}</div>
               ) : (
@@ -975,7 +1099,7 @@ export default function ComicsManager() {
           <TabsList className="h-auto flex-wrap justify-start">
             {tabs.map((t) => (
               <TabsTrigger key={t.value} value={t.value} className="flex-none">
-                {t.label} <span className="text-muted-foreground">{t.count}</span>
+                {t.label} <TabCount value={t.count} loading={isLoading} />
               </TabsTrigger>
             ))}
           </TabsList>
@@ -996,31 +1120,31 @@ export default function ComicsManager() {
       {body}
 
       {/* Create / edit */}
-      <Sheet open={!!editing} onOpenChange={(open) => !open && setEditing(undefined)}>
+      <Sheet open={!!editor} onOpenChange={(isOpen) => !isOpen && close()}>
         <SheetContent className="w-full gap-0 data-[side=right]:sm:max-w-2xl">
           <SheetHeader className="border-b">
-            <SheetTitle className="font-body text-lg font-bold">
-              {editing && editing !== 'new' ? editing.name : 'New comic'}
-            </SheetTitle>
+            <SheetTitle className="font-body text-lg font-bold">{editing ? editing.name : 'New comic'}</SheetTitle>
             <SheetDescription>
-              {editing && editing !== 'new'
+              {editing
                 ? 'Edit the comic page: look, story, gallery and calls to action.'
                 : 'Set up a new comic page. Characters and campaigns can link to it once it exists.'}
             </SheetDescription>
           </SheetHeader>
-          {editing && (
+          {editor && (
             <ComicForm
-              key={editing === 'new' ? `new-${newWorld}` : editing.id}
-              comic={editing === 'new' ? undefined : editing}
+              key={editing?.id ?? `new-${newWorld}`}
+              comic={editing}
               world={newWorld}
-              onDone={() => setEditing(undefined)}
+              rejected={editor.rejected}
+              onSave={(values) => onSave(editing, values)}
+              onCancel={close}
             />
           )}
         </SheetContent>
       </Sheet>
 
       {/* Delete confirmation */}
-      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
+      <AlertDialog open={!!deleting} onOpenChange={(isOpen) => !isOpen && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-body font-bold">Delete {deleting?.name}?</AlertDialogTitle>

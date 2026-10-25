@@ -1,7 +1,7 @@
 'use client';
 
 import { useDeferredValue, useState, useSyncExternalStore } from 'react';
-import { toast } from 'sonner';
+import { useSWRConfig } from 'swr';
 import {
   ArchiveIcon,
   CheckCheckIcon,
@@ -14,7 +14,12 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import { deleteContactRequest, updateContactRequest, useContactRequests } from '@/hooks/useContactRequests';
+import {
+  contactRequestsKey,
+  deleteContactRequest,
+  updateContactRequest,
+  useContactRequests,
+} from '@/hooks/useContactRequests';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import {
   CONTACT_STATUSES,
@@ -25,7 +30,8 @@ import {
   type ContactTopic,
 } from '@/lib/contact/types';
 import { cn } from '@/lib/utils';
-import { PageHeader } from './ui';
+import { removeRow, replaceRow, useOptimisticList } from './optimistic';
+import { Bone, Loading, PageHeader, Saving, TabCount, times } from './ui';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -44,7 +50,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const statusLabel: Record<ContactStatus, string> = {
@@ -84,8 +89,6 @@ const topicItems: Record<string, string> = {
   ...Object.fromEntries(CONTACT_TOPICS.map((t) => [t.value, t.label])),
 };
 
-const message = (error: unknown, fallback: string) => (error instanceof Error ? error.message : fallback);
-
 /** A pre-filled reply in the admin's own mail app */
 const replyHref = (r: ContactRequestDTO) => {
   const subject = `Re: [${topicLabel(r.topic)}] Your message to us`;
@@ -106,10 +109,13 @@ function StatusBadge({ status }: { status: ContactStatus }) {
 
 function RequestDetail({
   request,
+  pending,
   onStatus,
   onDelete,
 }: {
   request: ContactRequestDTO;
+  /** A change is with the server: the actions are locked until it answers */
+  pending: boolean;
   onStatus: (status: ContactStatus) => void;
   onDelete: () => void;
 }) {
@@ -119,6 +125,7 @@ function RequestDetail({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{topicLabel(request.topic)}</Badge>
           <StatusBadge status={request.status} />
+          {pending && <Saving className="ml-auto" />}
         </div>
         <CardTitle className="mt-2 font-body text-xl font-bold">{request.name}</CardTitle>
         <CardDescription>
@@ -136,7 +143,7 @@ function RequestDetail({
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{request.message}</p>
       </CardContent>
 
-      <CardFooter className="flex-wrap gap-2 border-t">
+      <CardFooter inert={pending} className={cn('flex-wrap gap-2 border-t', pending && 'opacity-60')}>
         <Button
           nativeButton={false}
           render={<a href={replyHref(request)} />}
@@ -177,6 +184,33 @@ function RequestDetail({
   );
 }
 
+/** Same frame as a list row, so nothing jumps when the data lands */
+function ListSkeleton() {
+  return (
+    <Loading label="Loading contact requests" className="divide-y">
+      {times(6, (i) => (
+        <div key={i} className="flex gap-3 px-4 py-3.5">
+          <Bone className="mt-1.5 size-2 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <Bone className={cn('h-3.5', i % 2 ? 'w-24' : 'w-32')} />
+              <Bone className="h-3 w-14" />
+            </div>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Bone className="h-4 w-14 rounded-full" />
+              <Bone className="h-3 w-36" />
+            </div>
+            <div className="mt-2 space-y-1.5">
+              <Bone className="h-3 w-full" />
+              <Bone className={cn('h-3', i % 3 ? 'w-3/4' : 'w-1/2')} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </Loading>
+  );
+}
+
 /* ---------- Page ---------- */
 
 export default function ContactRequestsManager() {
@@ -196,18 +230,41 @@ export default function ContactRequestsManager() {
     topic: topic === ALL_TOPICS ? undefined : (topic as ContactTopic),
     q: q || undefined,
   });
+  const { run, isPending } = useOptimisticList(refresh);
+
+  /* The sidebar's unread badge reads its own list; move it in step with each change, and back if it fails */
+  const { mutate: mutateCache } = useSWRConfig();
+  const withUnread = <R,>(request: Promise<R>, update: (unread: ContactRequestDTO[]) => ContactRequestDTO[]) => {
+    void mutateCache<ContactRequestDTO[]>(
+      contactRequestsKey({ status: 'NEW' }),
+      async () => {
+        await request;
+        return undefined;
+      },
+      { optimisticData: (unread) => update(unread ?? []), rollbackOnError: true, populateCache: false },
+    ).catch(() => undefined);
+    return request;
+  };
 
   const rows = requests.filter((r) => inTab(r, tab));
   const selected = requests.find((r) => r.id === selectedId) ?? null;
   const unread = requests.filter((r) => r.status === 'NEW').length;
 
-  const setStatus = async (r: ContactRequestDTO, status: ContactStatus, quiet = false) => {
-    try {
-      const { message: text } = await updateContactRequest(r.id, status);
-      if (!quiet) toast.success(text);
-    } catch (e) {
-      toast.error(message(e, 'Could not update'));
-    }
+  /* Every change lands in the list straight away and rolls back if the server says no */
+
+  const setStatus = (r: ContactRequestDTO, status: ContactStatus, quiet = false) => {
+    if (status === r.status) return;
+    const next = { ...r, status };
+    void run({
+      id: r.id,
+      update: (list) => replaceRow(list, next),
+      request: () =>
+        withUnread(updateContactRequest(r.id, status), (unread) =>
+          status === 'NEW' ? [next, ...removeRow(unread, r.id)] : removeRow(unread, r.id),
+        ),
+      notify: !quiet,
+      failure: 'Could not update',
+    });
   };
 
   /* Opening a new request marks it read */
@@ -217,24 +274,29 @@ export default function ContactRequestsManager() {
     if (r.status === 'NEW') void setStatus(r, 'READ', true);
   };
 
-  const onDelete = async () => {
+  const onDelete = () => {
     if (!deleting) return;
-    try {
-      const { message: text } = await deleteContactRequest(deleting.id);
-      toast.success(text);
-      if (selectedId === deleting.id) {
-        setSelectedId(null);
-        setSheetOpen(false);
-      }
-    } catch (e) {
-      toast.error(message(e, 'Could not delete'));
-    } finally {
-      setDeleting(null);
+    const { id } = deleting;
+    setDeleting(null);
+    if (selectedId === id) {
+      setSelectedId(null);
+      setSheetOpen(false);
     }
+    void run({
+      id,
+      update: (list) => removeRow(list, id),
+      request: () => withUnread(deleteContactRequest(id), (unread) => removeRow(unread, id)),
+      failure: 'Could not delete',
+    });
   };
 
   const detail = selected && (
-    <RequestDetail request={selected} onStatus={(s) => setStatus(selected, s)} onDelete={() => setDeleting(selected)} />
+    <RequestDetail
+      request={selected}
+      pending={isPending(selected.id)}
+      onStatus={(s) => setStatus(selected, s)}
+      onDelete={() => setDeleting(selected)}
+    />
   );
 
   let list;
@@ -254,16 +316,7 @@ export default function ContactRequestsManager() {
       </div>
     );
   } else if (isLoading) {
-    list = (
-      <div className="divide-y">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="space-y-2 p-4">
-            <Skeleton className="h-3 w-1/3" />
-            <Skeleton className="h-3 w-2/3" />
-          </div>
-        ))}
-      </div>
-    );
+    list = <ListSkeleton />;
   } else if (rows.length === 0) {
     list = (
       <div className="flex flex-col items-center gap-2 py-16 text-center">
@@ -337,7 +390,7 @@ export default function ContactRequestsManager() {
               const count = requests.filter((r) => inTab(r, t.value)).length;
               return (
                 <TabsTrigger key={t.value} value={t.value} className="flex-none">
-                  {t.label} <span className="text-muted-foreground">{count}</span>
+                  {t.label} <TabCount value={count} loading={isLoading} />
                 </TabsTrigger>
               );
             })}

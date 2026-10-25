@@ -14,35 +14,16 @@ import {
   TrendingUpIcon,
   TriangleAlertIcon,
   UsersIcon,
-  type LucideIcon,
 } from 'lucide-react';
 import { worlds, displayFontClass } from '@/config/worlds';
 import { useDashboard } from '@/hooks/useStats';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { PageHeader } from './ui';
+import { Bone, Loading, PageHeader, Stat, times } from './ui';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-
-function Stat({ label, value, hint, Icon }: { label: string; value: ReactNode; hint: string; Icon: LucideIcon }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardDescription className="text-xs uppercase tracking-[0.15em]">{label}</CardDescription>
-        <CardTitle className="font-body text-3xl font-bold tabular-nums">{value}</CardTitle>
-        <CardAction>
-          <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
-            <Icon className="size-4" />
-          </span>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="text-xs text-muted-foreground">{hint}</CardContent>
-    </Card>
-  );
-}
 
 /** "View all →" link in a card header */
 function SeeAll({ href, children = 'View all' }: { href: string; children?: ReactNode }) {
@@ -58,6 +39,9 @@ function SeeAll({ href, children = 'View all' }: { href: string; children?: Reac
 function Empty({ children }: { children: ReactNode }) {
   return <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">{children}</p>;
 }
+
+/* Skeleton bar widths, so placeholder rows don't all look the same */
+const WIDTHS = ['w-full', 'w-3/4', 'w-1/2', 'w-1/3'];
 
 export default function Dashboard() {
   const { dashboard: d, error, isLoading, isValidating, refresh } = useDashboard();
@@ -101,32 +85,18 @@ export default function Dashboard() {
     );
   }
 
-  if (isLoading || !d) {
-    return (
-      <>
-        {header}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
-          ))}
-        </div>
-        <div className="mt-6 grid gap-6 xl:grid-cols-3">
-          <Skeleton className="h-80 rounded-xl xl:col-span-2" />
-          <Skeleton className="h-80 rounded-xl" />
-        </div>
-      </>
-    );
-  }
-
-  const { stats, totals } = d;
-  const maxRaised = Math.max(1, ...d.topCampaigns.map((c) => c.raised));
-  const unassigned = d.comicsByWorld.none ?? [];
+  /* Until the data lands, every card renders with its real heading and skeletons where the numbers go */
+  const loading = isLoading || !d;
+  const stats = d?.stats;
+  const totals = d?.totals;
+  const maxRaised = Math.max(1, ...(d?.topCampaigns ?? []).map((c) => c.raised));
+  const unassigned = d?.comicsByWorld.none ?? [];
 
   return (
     <>
       {header}
 
-      {totals.newContactRequests > 0 && (
+      {totals && totals.newContactRequests > 0 && (
         <Alert className="mb-6">
           <InboxIcon />
           <AlertTitle>
@@ -143,78 +113,109 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="Total raised"
-          value={formatMoney(stats.raised)}
-          hint={`${stats.fundedIssues} issue${stats.fundedIssues === 1 ? '' : 's'} funded`}
+          value={stats && formatMoney(stats.raised)}
+          hint={stats && `${stats.fundedIssues} issue${stats.fundedIssues === 1 ? '' : 's'} funded`}
           Icon={DollarSignIcon}
+          loading={loading}
         />
         <Stat
           label="Backer pledges"
-          value={stats.backers.toLocaleString('en-US')}
-          hint={`${totals.campaigns} campaigns · ${stats.liveIssues} live · ${stats.upcomingIssues} upcoming`}
+          value={stats?.backers.toLocaleString('en-US')}
+          hint={stats && totals && `${totals.campaigns} campaigns · ${stats.liveIssues} live · ${stats.upcomingIssues} upcoming`}
           Icon={TrendingUpIcon}
+          loading={loading}
         />
         <Stat
           label="Comics"
-          value={totals.comics}
-          hint={`${totals.publishedComics} published · ${unassigned.length} unassigned`}
+          value={totals?.comics}
+          hint={totals && `${totals.publishedComics} published · ${unassigned.length} unassigned`}
           Icon={BookOpenIcon}
+          loading={loading}
         />
         <Stat
           label="Characters"
-          value={totals.characters}
-          hint={`${totals.publishedTestimonials}/${totals.testimonials} testimonials published`}
+          value={totals?.characters}
+          hint={totals && `${totals.publishedTestimonials}/${totals.testimonials} testimonials published`}
           Icon={UsersIcon}
+          loading={loading}
         />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         {/* Campaign performance */}
-        <Card className="xl:col-span-2">
+        <Card className="xl:col-span-2" aria-busy={loading}>
           <CardHeader>
             <CardTitle className="font-body font-bold">Campaign performance</CardTitle>
             <CardDescription>Biggest campaigns by amount raised.</CardDescription>
             <SeeAll href="/admin/live-campaigns" />
           </CardHeader>
           <CardContent className="space-y-5">
-            {d.topCampaigns.length === 0 && <Empty>No money raised yet.</Empty>}
-            {d.topCampaigns.map((c) => {
-              const accent = c.comic?.palette.accent ?? 'var(--foreground)';
-              return (
-                <div key={c.id} className="space-y-2">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full" style={{ backgroundColor: accent }} />
-                      <span className="text-sm font-medium">{c.title}</span>
-                      {c.status === 'LIVE' && <Badge variant="destructive">Live</Badge>}
+            {!d ? (
+              <Loading label="Loading campaigns" className="space-y-5">
+                {times(4, (i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Bone className="size-2 rounded-full" />
+                        <Bone className={cn('h-3.5', i % 2 ? 'w-28' : 'w-40')} />
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Bone className="h-3 w-20" />
+                        <Bone className="h-3 w-16" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs tabular-nums text-muted-foreground">
-                      <span>{c.backers.toLocaleString('en-US')} backers</span>
-                      <span className="text-foreground">{formatMoney(c.raised)}</span>
-                    </div>
-                  </div>
-                  <div className="h-8 w-full overflow-hidden rounded-md bg-muted/50">
-                    <div
-                      className="flex h-full min-w-12 items-center justify-end rounded-md px-2 text-[11px] font-bold text-black"
-                      style={{ width: `${(c.raised / maxRaised) * 100}%`, backgroundColor: accent }}
-                    >
-                      {c.funded}%
+                    <div className="h-8 w-full rounded-md bg-muted/50">
+                      <Bone className={cn('h-full', WIDTHS[i])} />
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </Loading>
+            ) : d.topCampaigns.length === 0 ? (
+              <Empty>No money raised yet.</Empty>
+            ) : (
+              d.topCampaigns.map((c) => {
+                const accent = c.comic?.palette.accent ?? 'var(--foreground)';
+                return (
+                  <div key={c.id} className="space-y-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2 rounded-full" style={{ backgroundColor: accent }} />
+                        <span className="text-sm font-medium">{c.title}</span>
+                        {c.status === 'LIVE' && <Badge variant="destructive">Live</Badge>}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs tabular-nums text-muted-foreground">
+                        <span>{c.backers.toLocaleString('en-US')} backers</span>
+                        <span className="text-foreground">{formatMoney(c.raised)}</span>
+                      </div>
+                    </div>
+                    <div className="h-8 w-full overflow-hidden rounded-md bg-muted/50">
+                      <div
+                        className="flex h-full min-w-12 items-center justify-end rounded-md px-2 text-[11px] font-bold text-black"
+                        style={{ width: `${(c.raised / maxRaised) * 100}%`, backgroundColor: accent }}
+                      >
+                        {c.funded}%
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </CardContent>
           <CardFooter className="grid grid-cols-3 border-t p-0 text-center">
             {[
-              { label: 'Funded', value: stats.fundedIssues },
-              { label: 'Live', value: stats.liveIssues },
+              { label: 'Funded', value: stats?.fundedIssues },
+              { label: 'Live', value: stats?.liveIssues },
               {
                 label: 'Avg. per funded issue',
-                value: stats.fundedIssues ? formatMoney(Math.round(stats.raised / stats.fundedIssues)) : '—',
+                value: stats && (stats.fundedIssues ? formatMoney(Math.round(stats.raised / stats.fundedIssues)) : '—'),
               },
             ].map((item, i) => (
               <div key={item.label} className={cn('p-4', i === 1 && 'border-x')}>
-                <p className="text-xl font-bold tabular-nums">{item.value}</p>
+                {loading ? (
+                  <Bone className="mx-auto my-1 h-5 w-12" />
+                ) : (
+                  <p className="text-xl font-bold tabular-nums">{item.value}</p>
+                )}
                 <p className="text-xs text-muted-foreground">{item.label}</p>
               </div>
             ))}
@@ -222,13 +223,28 @@ export default function Dashboard() {
         </Card>
 
         {/* Content gaps */}
-        <Card>
+        <Card aria-busy={loading}>
           <CardHeader>
             <CardTitle className="font-body font-bold">Content to finish</CardTitle>
             <CardDescription>Comics with [PLACEHOLDER] text, theirs and their characters&apos;.</CardDescription>
           </CardHeader>
           <CardContent>
-            {d.contentGaps.length === 0 ? (
+            {!d ? (
+              <Loading label="Loading content gaps" className="divide-y">
+                {times(5, (i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 py-3">
+                    <div className="flex items-center gap-3">
+                      <Bone className="size-9 shrink-0 rounded-lg" />
+                      <div className="space-y-1.5">
+                        <Bone className={cn('h-3.5', i % 2 ? 'w-24' : 'w-32')} />
+                        <Bone className="h-3 w-16" />
+                      </div>
+                    </div>
+                    <Bone className="h-5 w-16 rounded-full" />
+                  </div>
+                ))}
+              </Loading>
+            ) : d.contentGaps.length === 0 ? (
               <Empty>Nothing marked as placeholder.</Empty>
             ) : (
               <ul className="divide-y">
@@ -256,7 +272,7 @@ export default function Dashboard() {
       </div>
 
       {/* Worlds: labels from config/worlds, comics from the database */}
-      <Card className="mt-6 gap-0 pb-0">
+      <Card className="mt-6 gap-0 pb-0" aria-busy={loading}>
         <CardHeader className="pb-4">
           <CardTitle className="font-body font-bold">Worlds</CardTitle>
           <CardDescription>Which comics sit in each world.</CardDescription>
@@ -264,27 +280,40 @@ export default function Dashboard() {
         </CardHeader>
         <div className="grid gap-px border-t bg-border sm:grid-cols-2 xl:grid-cols-4">
           {worlds.map((world) => {
-            const comics = d.comicsByWorld[world.slug] ?? [];
+            const comics = d?.comicsByWorld[world.slug] ?? [];
             return (
               <div key={world.slug} className="bg-card p-5">
                 <h3 className={cn('text-2xl', displayFontClass[world.display])}>{world.label}</h3>
                 <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{world.line}</p>
                 <div className="mt-4 space-y-2">
-                  {comics.length === 0 && <p className="text-xs text-muted-foreground">No comics yet.</p>}
-                  {comics.map((c) => (
-                    <div key={c.id} className={cn('flex items-center gap-3 rounded-lg bg-muted/40 p-2', !c.published && 'opacity-60')}>
-                      <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded bg-muted">
-                        <Image src={c.poster} alt="" fill sizes="56px" unoptimized className="object-cover" />
+                  {!d ? (
+                    times(2, (i) => (
+                      <div key={i} className="flex items-center gap-3 rounded-lg bg-muted/40 p-2">
+                        <Bone className="h-10 w-14 shrink-0 rounded" />
+                        <div className="flex-1 space-y-1.5">
+                          <Bone className={cn('h-3.5', i ? 'w-1/2' : 'w-3/4')} />
+                          <Bone className="h-2.5 w-20" />
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm">{c.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {c.characters} character{c.characters === 1 ? '' : 's'}
-                          {!c.published && ' · hidden'}
-                        </p>
+                    ))
+                  ) : comics.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No comics yet.</p>
+                  ) : (
+                    comics.map((c) => (
+                      <div key={c.id} className={cn('flex items-center gap-3 rounded-lg bg-muted/40 p-2', !c.published && 'opacity-60')}>
+                        <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded bg-muted">
+                          <Image src={c.poster} alt="" fill sizes="56px" unoptimized className="object-cover" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm">{c.name}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {c.characters} character{c.characters === 1 ? '' : 's'}
+                            {!c.published && ' · hidden'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             );
@@ -294,13 +323,23 @@ export default function Dashboard() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         {/* Latest characters */}
-        <Card className="xl:col-span-2">
+        <Card className="xl:col-span-2" aria-busy={loading}>
           <CardHeader>
             <CardTitle className="font-body font-bold">Latest characters</CardTitle>
             <SeeAll href="/admin/characters" />
           </CardHeader>
           <CardContent>
-            {d.recentCharacters.length === 0 ? (
+            {!d ? (
+              <Loading label="Loading characters" className="flex gap-4 overflow-hidden pb-1">
+                {times(6, (i) => (
+                  <div key={i} className="w-28 shrink-0">
+                    <Bone className="aspect-3/4 rounded-lg" />
+                    <Bone className={cn('mt-2.5 h-3.5', i % 2 ? 'w-16' : 'w-20')} />
+                    <Bone className="mt-1.5 h-2.5 w-12" />
+                  </div>
+                ))}
+              </Loading>
+            ) : d.recentCharacters.length === 0 ? (
               <Empty>No characters yet.</Empty>
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-1">
@@ -322,13 +361,26 @@ export default function Dashboard() {
         </Card>
 
         {/* Latest testimonials */}
-        <Card>
+        <Card aria-busy={loading}>
           <CardHeader>
             <CardTitle className="font-body font-bold">Latest testimonials</CardTitle>
             <SeeAll href="/admin/backer-testimonials" />
           </CardHeader>
           <CardContent>
-            {d.recentTestimonials.length === 0 ? (
+            {!d ? (
+              <Loading label="Loading testimonials" className="space-y-4">
+                {times(3, (i) => (
+                  <div key={i} className="flex gap-3">
+                    <MessageSquareQuoteIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground/40" />
+                    <div className="flex-1 space-y-1.5">
+                      <Bone className="h-3.5 w-full" />
+                      <Bone className={cn('h-3.5', i % 2 ? 'w-1/2' : 'w-2/3')} />
+                      <Bone className="mt-2 h-3 w-28" />
+                    </div>
+                  </div>
+                ))}
+              </Loading>
+            ) : d.recentTestimonials.length === 0 ? (
               <Empty>No testimonials yet.</Empty>
             ) : (
               <ul className="space-y-4">
