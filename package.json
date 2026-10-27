@@ -10,6 +10,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:content": "tsx prisma/seed-content.ts",
     "db:seed:campaigns": "tsx prisma/seed-content.ts campaigns",
+    "db:images": "tsx prisma/migrate-images.ts",
+    "db:images:dry": "tsx prisma/migrate-images.ts --dry",
     "postinstall": "prisma skills sync || exit 0"
   },
   "dependencies": {
@@ -18,6 +20,7 @@
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.11.0",
     "cn": "^0.3.2",
     "framer-motion": "^13.4.0",
     "gsap": "^3.15.0",

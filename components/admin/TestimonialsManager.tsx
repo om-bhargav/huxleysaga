@@ -30,6 +30,7 @@ import {
   type Rejected,
 } from './optimistic';
 import { Bone, Loading, PageHeader, Saving, TabCount, times } from './ui';
+import { ImageInput, SubmitButton, UploadScope } from './upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -133,96 +134,112 @@ function TestimonialForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-      <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
-          {rejected && (
-            <Alert variant="destructive" className="mb-5">
-              <TriangleAlertIcon />
-              <AlertTitle>Couldn&apos;t save</AlertTitle>
-              <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
-            </Alert>
-          )}
+    <UploadScope>
+      <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
+            {rejected && (
+              <Alert variant="destructive" className="mb-5">
+                <TriangleAlertIcon />
+                <AlertTitle>Couldn&apos;t save</AlertTitle>
+                <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
+              </Alert>
+            )}
 
-          <FieldGroup>
-            {/* Live preview, styled like the card on the home page */}
-            <div>
-              <p className="mb-2 text-xs uppercase tracking-[0.15em] text-muted-foreground">Preview</p>
-              <TestimonialPreview
-                quote={quote || 'The backer’s comment shows here.'}
-                name={name || 'Backer name'}
-                campaign={campaign || 'Campaign'}
-                image={image || null}
-              />
-            </div>
-
-            <Field data-invalid={!!errors.quote}>
-              <FieldLabel htmlFor="quote">Quote</FieldLabel>
-              <Textarea className="min-h-28" {...field('quote', { required: 'Quote is required' })} />
-              <FieldDescription>Paste the backer&apos;s comment as written, with their permission.</FieldDescription>
-              <FieldError errors={[errors.quote]} />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field data-invalid={!!errors.name}>
-                <FieldLabel htmlFor="name">Backer name</FieldLabel>
-                <Input placeholder="Alex R." {...field('name', { required: 'Name is required' })} />
-                <FieldError errors={[errors.name]} />
-              </Field>
-              <Field data-invalid={!!errors.campaign}>
-                <FieldLabel htmlFor="campaign">Campaign backed</FieldLabel>
-                <Input
-                  placeholder="Agent Scarlett #1"
-                  list="campaign-suggestions"
-                  {...field('campaign', { required: 'Campaign is required' })}
+            <FieldGroup>
+              {/* Live preview, styled like the card on the home page */}
+              <div>
+                <p className="mb-2 text-xs uppercase tracking-[0.15em] text-muted-foreground">Preview</p>
+                <TestimonialPreview
+                  quote={quote || 'The backer’s comment shows here.'}
+                  name={name || 'Backer name'}
+                  campaign={campaign || 'Campaign'}
+                  image={image || null}
                 />
-                <datalist id="campaign-suggestions">
-                  {campaigns.map((title) => (
-                    <option key={title} value={title} />
-                  ))}
-                </datalist>
-                <FieldDescription>Shown as &ldquo;Backed …&rdquo;.</FieldDescription>
-                <FieldError errors={[errors.campaign]} />
+              </div>
+
+              <Field data-invalid={!!errors.quote}>
+                <FieldLabel htmlFor="quote">Quote</FieldLabel>
+                <Textarea className="min-h-28" {...field('quote', { required: 'Quote is required' })} />
+                <FieldDescription>Paste the backer&apos;s comment as written, with their permission.</FieldDescription>
+                <FieldError errors={[errors.quote]} />
               </Field>
-            </div>
 
-            <Field>
-              <FieldLabel htmlFor="image">Image URL</FieldLabel>
-              <Input placeholder="Optional screenshot or artwork" {...field('image')} />
-            </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field data-invalid={!!errors.name}>
+                  <FieldLabel htmlFor="name">Backer name</FieldLabel>
+                  <Input placeholder="Alex R." {...field('name', { required: 'Name is required' })} />
+                  <FieldError errors={[errors.name]} />
+                </Field>
+                <Field data-invalid={!!errors.campaign}>
+                  <FieldLabel htmlFor="campaign">Campaign backed</FieldLabel>
+                  <Input
+                    placeholder="Agent Scarlett #1"
+                    list="campaign-suggestions"
+                    {...field('campaign', { required: 'Campaign is required' })}
+                  />
+                  <datalist id="campaign-suggestions">
+                    {campaigns.map((title) => (
+                      <option key={title} value={title} />
+                    ))}
+                  </datalist>
+                  <FieldDescription>Shown as &ldquo;Backed …&rdquo;.</FieldDescription>
+                  <FieldError errors={[errors.campaign]} />
+                </Field>
+              </div>
 
-            <Controller
-              control={control}
-              name="published"
-              render={({ field: { value, onChange } }) => (
-                <FieldLabel htmlFor="published">
-                  <Field orientation="horizontal">
-                    <FieldContent>
-                      <span className="font-medium">Published</span>
-                      <FieldDescription>Show this on the home page.</FieldDescription>
-                    </FieldContent>
-                    <Switch id="published" checked={value} onCheckedChange={onChange} disabled={isSubmitting} />
-                  </Field>
-                </FieldLabel>
-              )}
-            />
+              <Field>
+                <FieldLabel htmlFor="image">Image</FieldLabel>
+                <Controller
+                  control={control}
+                  name="image"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <ImageInput
+                      id="image"
+                      folder="testimonials"
+                      placeholder="Optional screenshot or artwork"
+                      value={value}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              </Field>
 
-            <Field className="sm:w-40">
-              <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
-              <Input type="number" {...field('sortOrder')} />
-              <FieldDescription>Lower shows first.</FieldDescription>
-            </Field>
-          </FieldGroup>
-        </div>
+              <Controller
+                control={control}
+                name="published"
+                render={({ field: { value, onChange } }) => (
+                  <FieldLabel htmlFor="published">
+                    <Field orientation="horizontal">
+                      <FieldContent>
+                        <span className="font-medium">Published</span>
+                        <FieldDescription>Show this on the home page.</FieldDescription>
+                      </FieldContent>
+                      <Switch id="published" checked={value} onCheckedChange={onChange} disabled={isSubmitting} />
+                    </Field>
+                  </FieldLabel>
+                )}
+              />
 
-        <SheetFooter className="flex-row justify-end border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">{testimonial ? 'Save changes' : 'Add testimonial'}</Button>
-        </SheetFooter>
-      </fieldset>
-    </form>
+              <Field className="sm:w-40">
+                <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
+                <Input type="number" {...field('sortOrder')} />
+                <FieldDescription>Lower shows first.</FieldDescription>
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <SheetFooter className="flex-row justify-end border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <SubmitButton>{testimonial ? 'Save changes' : 'Add testimonial'}</SubmitButton>
+          </SheetFooter>
+        </fieldset>
+      </form>
+    </UploadScope>
   );
 }
 

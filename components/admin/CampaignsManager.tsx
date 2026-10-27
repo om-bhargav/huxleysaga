@@ -34,6 +34,7 @@ import {
   type Rejected,
 } from './optimistic';
 import { Bone, Loading, PageHeader, Saving, Stat, TabCount, times } from './ui';
+import { ImageInput, SubmitButton, UploadScope } from './upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -222,165 +223,182 @@ function CampaignForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-      <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
-          {rejected && (
-            <Alert variant="destructive" className="mb-5">
-              <TriangleAlertIcon />
-              <AlertTitle>Couldn&apos;t save</AlertTitle>
-              <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
-            </Alert>
-          )}
+    <UploadScope>
+      <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
+            {rejected && (
+              <Alert variant="destructive" className="mb-5">
+                <TriangleAlertIcon />
+                <AlertTitle>Couldn&apos;t save</AlertTitle>
+                <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
+              </Alert>
+            )}
 
-          <FieldGroup>
-            <div className="relative aspect-3/2 overflow-hidden rounded-xl border border-dashed bg-muted/30">
-              {image ? (
-                // Plain img: the URL can point anywhere while it's being typed
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
-              ) : (
-                <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <ImageIcon className="size-5" /> Image preview
-                </span>
-              )}
-            </div>
-
-            <Field data-invalid={!!errors.image}>
-              <FieldLabel htmlFor="image">Image URL</FieldLabel>
-              <Input placeholder="https://… or /assets/…" {...field('image', { required: 'Image is required' })} />
-              <FieldError errors={[errors.image]} />
-            </Field>
-
-            <Field data-invalid={!!errors.title}>
-              <FieldLabel htmlFor="title">Title</FieldLabel>
-              <Input placeholder="Venom Vixens #2" {...field('title', { required: 'Title is required' })} />
-              <FieldError errors={[errors.title]} />
-            </Field>
-
-            <Field data-invalid={!!errors.description}>
-              <FieldLabel htmlFor="description">Description</FieldLabel>
-              <Textarea className="min-h-24" {...field('description', { required: 'Description is required' })} />
-              <FieldDescription>Short line under the title on the card.</FieldDescription>
-              <FieldError errors={[errors.description]} />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
-                <FieldLabel>Status</FieldLabel>
-                <Controller
-                  control={control}
-                  name="status"
-                  render={({ field: { value, onChange } }) => (
-                    <Select items={statusItems} value={value} onValueChange={(v) => onChange(v)} disabled={isSubmitting}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CAMPAIGN_STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {statusLabel(s)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Comic</FieldLabel>
-                <Controller
-                  control={control}
-                  name="universeSlug"
-                  render={({ field: { value, onChange } }) => (
-                    <Select items={comicItems} value={value} onValueChange={(v) => onChange(v)} disabled={isSubmitting}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(comicItems).map(([slug, name]) => (
-                          <SelectItem key={slug} value={slug}>
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field data-invalid={!!errors.raised}>
-                <FieldLabel htmlFor="raised">Raised ($)</FieldLabel>
-                <Input type="number" min={0} {...field('raised')} />
-                <FieldError errors={[errors.raised]} />
-              </Field>
-              <Field data-invalid={!!errors.goal}>
-                <FieldLabel htmlFor="goal">Goal ($)</FieldLabel>
-                <Input
-                  type="number"
-                  min={1}
-                  {...field('goal', { required: 'Goal is required', min: { value: 1, message: 'Goal must be more than 0' } })}
-                />
-                <FieldError errors={[errors.goal]} />
-              </Field>
-              <Field data-invalid={!!errors.backers}>
-                <FieldLabel htmlFor="backers">Backers</FieldLabel>
-                <Input type="number" min={0} {...field('backers')} />
-                <FieldError errors={[errors.backers]} />
-              </Field>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Funded</span>
-                <span className="font-medium tabular-nums">{funded}%</span>
+            <FieldGroup>
+              <div className="relative aspect-3/2 overflow-hidden rounded-xl border border-dashed bg-muted/30">
+                {image ? (
+                  // Plain img: the URL can point anywhere while it's being typed
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
+                ) : (
+                  <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <ImageIcon className="size-5" /> Image preview
+                  </span>
+                )}
               </div>
-              <FundedBar value={funded} color="var(--foreground)" />
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="startsAt">Starts</FieldLabel>
-                <Input type="date" className="scheme-dark" {...field('startsAt')} />
+              <Field data-invalid={!!errors.image}>
+                <FieldLabel htmlFor="image">Image</FieldLabel>
+                <Controller
+                  control={control}
+                  name="image"
+                  rules={{ required: 'Image is required' }}
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <ImageInput
+                      id="image"
+                      folder="campaigns"
+                      value={value}
+                      onChange={onChange}
+                      onBlur={onBlur}
+                      invalid={!!errors.image}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+                <FieldError errors={[errors.image]} />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="endsAt">Ends</FieldLabel>
-                <Input type="date" className="scheme-dark" {...field('endsAt')} />
-                <FieldDescription>Days left on the card count down to this.</FieldDescription>
-              </Field>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field data-invalid={!!errors.buttonLabel}>
-                <FieldLabel htmlFor="buttonLabel">Button label</FieldLabel>
-                <Input placeholder="Back the campaign" {...field('buttonLabel', { required: 'Button label is required' })} />
-                <FieldError errors={[errors.buttonLabel]} />
+              <Field data-invalid={!!errors.title}>
+                <FieldLabel htmlFor="title">Title</FieldLabel>
+                <Input placeholder="Venom Vixens #2" {...field('title', { required: 'Title is required' })} />
+                <FieldError errors={[errors.title]} />
               </Field>
-              <Field data-invalid={!!errors.buttonHref}>
-                <FieldLabel htmlFor="buttonHref">Button link</FieldLabel>
-                <Input placeholder="https://kickstarter.com/…" {...field('buttonHref', { required: 'Button link is required' })} />
-                <FieldError errors={[errors.buttonHref]} />
+
+              <Field data-invalid={!!errors.description}>
+                <FieldLabel htmlFor="description">Description</FieldLabel>
+                <Textarea className="min-h-24" {...field('description', { required: 'Description is required' })} />
+                <FieldDescription>Short line under the title on the card.</FieldDescription>
+                <FieldError errors={[errors.description]} />
               </Field>
-            </div>
 
-            <Field className="sm:w-40">
-              <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
-              <Input type="number" {...field('sortOrder')} />
-              <FieldDescription>Lower shows first.</FieldDescription>
-            </Field>
-          </FieldGroup>
-        </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel>Status</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="status"
+                    render={({ field: { value, onChange } }) => (
+                      <Select items={statusItems} value={value} onValueChange={(v) => onChange(v)} disabled={isSubmitting}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CAMPAIGN_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {statusLabel(s)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Comic</FieldLabel>
+                  <Controller
+                    control={control}
+                    name="universeSlug"
+                    render={({ field: { value, onChange } }) => (
+                      <Select items={comicItems} value={value} onValueChange={(v) => onChange(v)} disabled={isSubmitting}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(comicItems).map(([slug, name]) => (
+                            <SelectItem key={slug} value={slug}>
+                              {name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </Field>
+              </div>
 
-        <SheetFooter className="flex-row justify-end border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">{campaign ? 'Save changes' : 'Create campaign'}</Button>
-        </SheetFooter>
-      </fieldset>
-    </form>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field data-invalid={!!errors.raised}>
+                  <FieldLabel htmlFor="raised">Raised ($)</FieldLabel>
+                  <Input type="number" min={0} {...field('raised')} />
+                  <FieldError errors={[errors.raised]} />
+                </Field>
+                <Field data-invalid={!!errors.goal}>
+                  <FieldLabel htmlFor="goal">Goal ($)</FieldLabel>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...field('goal', { required: 'Goal is required', min: { value: 1, message: 'Goal must be more than 0' } })}
+                  />
+                  <FieldError errors={[errors.goal]} />
+                </Field>
+                <Field data-invalid={!!errors.backers}>
+                  <FieldLabel htmlFor="backers">Backers</FieldLabel>
+                  <Input type="number" min={0} {...field('backers')} />
+                  <FieldError errors={[errors.backers]} />
+                </Field>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Funded</span>
+                  <span className="font-medium tabular-nums">{funded}%</span>
+                </div>
+                <FundedBar value={funded} color="var(--foreground)" />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="startsAt">Starts</FieldLabel>
+                  <Input type="date" className="scheme-dark" {...field('startsAt')} />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="endsAt">Ends</FieldLabel>
+                  <Input type="date" className="scheme-dark" {...field('endsAt')} />
+                  <FieldDescription>Days left on the card count down to this.</FieldDescription>
+                </Field>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field data-invalid={!!errors.buttonLabel}>
+                  <FieldLabel htmlFor="buttonLabel">Button label</FieldLabel>
+                  <Input placeholder="Back the campaign" {...field('buttonLabel', { required: 'Button label is required' })} />
+                  <FieldError errors={[errors.buttonLabel]} />
+                </Field>
+                <Field data-invalid={!!errors.buttonHref}>
+                  <FieldLabel htmlFor="buttonHref">Button link</FieldLabel>
+                  <Input placeholder="https://kickstarter.com/…" {...field('buttonHref', { required: 'Button link is required' })} />
+                  <FieldError errors={[errors.buttonHref]} />
+                </Field>
+              </div>
+
+              <Field className="sm:w-40">
+                <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
+                <Input type="number" {...field('sortOrder')} />
+                <FieldDescription>Lower shows first.</FieldDescription>
+              </Field>
+            </FieldGroup>
+          </div>
+
+          <SheetFooter className="flex-row justify-end border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <SubmitButton>{campaign ? 'Save changes' : 'Create campaign'}</SubmitButton>
+          </SheetFooter>
+        </fieldset>
+      </form>
+    </UploadScope>
   );
 }
 

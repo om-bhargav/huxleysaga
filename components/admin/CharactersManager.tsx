@@ -35,6 +35,7 @@ import {
   type Rejected,
 } from './optimistic';
 import { Bone, Loading, PageHeader, Saving, times } from './ui';
+import { ImageInput, SubmitButton, UploadImagesButton, UploadScope } from './upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -185,191 +186,216 @@ function CharacterForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-      <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
-          {rejected && (
-            <Alert variant="destructive" className="mb-5">
-              <TriangleAlertIcon />
-              <AlertTitle>Couldn&apos;t save</AlertTitle>
-              <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
-            </Alert>
-          )}
+    <UploadScope>
+      <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
+            {rejected && (
+              <Alert variant="destructive" className="mb-5">
+                <TriangleAlertIcon />
+                <AlertTitle>Couldn&apos;t save</AlertTitle>
+                <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
+              </Alert>
+            )}
 
-          <FieldGroup>
-            <div className="flex gap-4">
-              <div className="relative aspect-3/4 w-32 shrink-0 overflow-hidden rounded-xl border border-dashed bg-muted/30">
-                {portrait ? (
-                  // Plain img: the URL can point anywhere while it's being typed
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={portrait} alt="" className="absolute inset-0 size-full object-cover" />
-                ) : (
-                  <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <ImageIcon className="size-5" /> Portrait
-                  </span>
-                )}
+            <FieldGroup>
+              <div className="flex gap-4">
+                <div className="relative aspect-3/4 w-32 shrink-0 overflow-hidden rounded-xl border border-dashed bg-muted/30">
+                  {portrait ? (
+                    // Plain img: the URL can point anywhere while it's being typed
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={portrait} alt="" className="absolute inset-0 size-full object-cover" />
+                  ) : (
+                    <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <ImageIcon className="size-5" /> Portrait
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col gap-4">
+                  <Field data-invalid={!!errors.name}>
+                    <FieldLabel htmlFor="name">Name</FieldLabel>
+                    <Input placeholder='Jessica "Jess" Malone' {...field('name', { required: 'Name is required' })} />
+                    <FieldError errors={[errors.name]} />
+                  </Field>
+                </div>
               </div>
-              <div className="flex flex-1 flex-col gap-4">
-                <Field data-invalid={!!errors.name}>
-                  <FieldLabel htmlFor="name">Name</FieldLabel>
-                  <Input placeholder='Jessica "Jess" Malone' {...field('name', { required: 'Name is required' })} />
-                  <FieldError errors={[errors.name]} />
+
+              {/* Images: the first is the portrait on cards and in the list */}
+              <FieldSet data-invalid={!!(errors.images?.root ?? errors.images?.message)}>
+                <FieldLegend variant="label">Images</FieldLegend>
+                <FieldDescription>The first one is the portrait. Use the arrows to reorder.</FieldDescription>
+                <div className="space-y-2">
+                  {images.fields.map((f, i) => (
+                    <div key={f.id} className="flex items-start gap-2 rounded-lg border p-2">
+                      <div className="relative aspect-3/4 w-12 shrink-0 overflow-hidden rounded bg-muted">
+                        {imageValues?.[i]?.src && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={imageValues[i].src} alt="" className="absolute inset-0 size-full object-cover" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <Controller
+                          control={control}
+                          name={`images.${i}.src`}
+                          rules={{ required: 'Image is required' }}
+                          render={({ field: { value, onChange, onBlur } }) => (
+                            <ImageInput
+                              folder="characters"
+                              aria-label={`Image ${i + 1} URL`}
+                              value={value}
+                              onChange={onChange}
+                              onBlur={onBlur}
+                              invalid={!!errors.images?.[i]?.src}
+                              disabled={isSubmitting}
+                            />
+                          )}
+                        />
+                        {i === 0 && <p className="text-xs text-muted-foreground">Portrait</p>}
+                        <FieldError errors={[errors.images?.[i]?.src]} />
+                      </div>
+                      <div className="flex flex-col">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Move up"
+                          disabled={i === 0}
+                          onClick={() => images.move(i, i - 1)}
+                        >
+                          <ArrowUpIcon />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Move down"
+                          disabled={i === images.fields.length - 1}
+                          onClick={() => images.move(i, i + 1)}
+                        >
+                          <ArrowDownIcon />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Remove image"
+                          className="hover:text-destructive"
+                          onClick={() => images.remove(i)}
+                        >
+                          <XIcon />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {images.fields.length === 0 && (
+                    <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">No images yet.</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <UploadImagesButton
+                    folder="characters"
+                    disabled={isSubmitting}
+                    onUploaded={(urls) => {
+                      const added = urls.map((src) => ({ src }));
+                      /* Empty slots (a new character starts with one) give way to the uploads */
+                      const filled = (imageValues ?? []).filter((image) => image.src.trim());
+                      if (filled.length === (imageValues ?? []).length) images.append(added);
+                      else images.replace([...filled, ...added]);
+                    }}
+                  />
+                  <Button type="button" variant="outline" className="w-fit" onClick={() => images.append({ src: '' })}>
+                    <PlusIcon /> Add by URL
+                  </Button>
+                </div>
+                <FieldError errors={[{ message: errors.images?.root?.message ?? errors.images?.message }]} />
+              </FieldSet>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="alias">Alias / codename</FieldLabel>
+                  <Input placeholder="Viperess" {...field('alias')} />
+                  <FieldDescription>Optional. Printed above the bio.</FieldDescription>
+                </Field>
+                <Field data-invalid={!!errors.role}>
+                  <FieldLabel htmlFor="role">Role</FieldLabel>
+                  <Input placeholder="Leader" {...field('role', { required: 'Role is required' })} />
+                  <FieldError errors={[errors.role]} />
                 </Field>
               </div>
-            </div>
 
-            {/* Images: the first is the portrait on cards and in the list */}
-            <FieldSet data-invalid={!!(errors.images?.root ?? errors.images?.message)}>
-              <FieldLegend variant="label">Images</FieldLegend>
-              <FieldDescription>The first one is the portrait. Use the arrows to reorder.</FieldDescription>
-              <div className="space-y-2">
-                {images.fields.map((f, i) => (
-                  <div key={f.id} className="flex items-start gap-2 rounded-lg border p-2">
-                    <div className="relative aspect-3/4 w-12 shrink-0 overflow-hidden rounded bg-muted">
-                      {imageValues?.[i]?.src && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imageValues[i].src} alt="" className="absolute inset-0 size-full object-cover" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <Input
-                        placeholder="https://… or /assets/…"
-                        aria-label={`Image ${i + 1} URL`}
-                        aria-invalid={!!errors.images?.[i]?.src}
-                        {...register(`images.${i}.src`, { required: 'Image URL is required' })}
-                      />
-                      {i === 0 && <p className="text-xs text-muted-foreground">Portrait</p>}
-                      <FieldError errors={[errors.images?.[i]?.src]} />
-                    </div>
-                    <div className="flex flex-col">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="Move up"
-                        disabled={i === 0}
-                        onClick={() => images.move(i, i - 1)}
-                      >
-                        <ArrowUpIcon />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="Move down"
-                        disabled={i === images.fields.length - 1}
-                        onClick={() => images.move(i, i + 1)}
-                      >
-                        <ArrowDownIcon />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="Remove image"
-                        className="hover:text-destructive"
-                        onClick={() => images.remove(i)}
-                      >
-                        <XIcon />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {images.fields.length === 0 && (
-                  <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">No images yet.</p>
-                )}
-              </div>
-              <Button type="button" variant="outline" className="w-fit" onClick={() => images.append({ src: '' })}>
-                <PlusIcon /> Add image
-              </Button>
-              <FieldError errors={[{ message: errors.images?.root?.message ?? errors.images?.message }]} />
-            </FieldSet>
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="alias">Alias / codename</FieldLabel>
-                <Input placeholder="Viperess" {...field('alias')} />
-                <FieldDescription>Optional. Printed above the bio.</FieldDescription>
+                <FieldLabel htmlFor="power">Power</FieldLabel>
+                <Input placeholder="Venomous bite" {...field('power')} />
               </Field>
-              <Field data-invalid={!!errors.role}>
-                <FieldLabel htmlFor="role">Role</FieldLabel>
-                <Input placeholder="Leader" {...field('role', { required: 'Role is required' })} />
-                <FieldError errors={[errors.role]} />
+
+              <Field data-invalid={!!errors.copy}>
+                <FieldLabel htmlFor="copy">Bio</FieldLabel>
+                <Textarea className="min-h-32" {...field('copy', { required: 'Bio is required' })} />
+                <FieldError errors={[errors.copy]} />
               </Field>
-            </div>
 
-            <Field>
-              <FieldLabel htmlFor="power">Power</FieldLabel>
-              <Input placeholder="Venomous bite" {...field('power')} />
-            </Field>
+              {/* Comics: one character can be in several */}
+              <Controller
+                control={control}
+                name="comics"
+                rules={{ validate: (v) => v.length > 0 || 'Pick at least one comic' }}
+                render={({ field: { value, onChange } }) => (
+                  <FieldSet data-invalid={!!errors.comics}>
+                    <FieldLegend variant="label">Comics</FieldLegend>
+                    <FieldDescription>Pick every comic this character appears in.</FieldDescription>
+                    {!comicsLoading && comics.length === 0 && (
+                      <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                        No comics yet. Create one on the Comics page first.
+                      </p>
+                    )}
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {comics.map((u) => {
+                        const checked = value.includes(u.slug);
+                        return (
+                          <FieldLabel key={u.slug} htmlFor={`comic-${u.slug}`}>
+                            <Field orientation="horizontal">
+                              <Checkbox
+                                id={`comic-${u.slug}`}
+                                checked={checked}
+                                disabled={isSubmitting}
+                                onCheckedChange={(on) =>
+                                  onChange(on ? [...value, u.slug] : value.filter((slug) => slug !== u.slug))
+                                }
+                              />
+                              <FieldContent>
+                                <FieldTitle>
+                                  <span className="size-2.5 rounded-full" style={{ backgroundColor: u.palette.accent }} />
+                                  {u.name}
+                                </FieldTitle>
+                                <FieldDescription className="text-xs">{u.genre.replace('[PLACEHOLDER] ', '')}</FieldDescription>
+                              </FieldContent>
+                            </Field>
+                          </FieldLabel>
+                        );
+                      })}
+                    </div>
+                    <FieldError errors={[errors.comics]} />
+                  </FieldSet>
+                )}
+              />
 
-            <Field data-invalid={!!errors.copy}>
-              <FieldLabel htmlFor="copy">Bio</FieldLabel>
-              <Textarea className="min-h-32" {...field('copy', { required: 'Bio is required' })} />
-              <FieldError errors={[errors.copy]} />
-            </Field>
+              <Field className="sm:w-40">
+                <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
+                <Input type="number" {...field('sortOrder')} />
+                <FieldDescription>Lower shows first.</FieldDescription>
+              </Field>
+            </FieldGroup>
+          </div>
 
-            {/* Comics: one character can be in several */}
-            <Controller
-              control={control}
-              name="comics"
-              rules={{ validate: (v) => v.length > 0 || 'Pick at least one comic' }}
-              render={({ field: { value, onChange } }) => (
-                <FieldSet data-invalid={!!errors.comics}>
-                  <FieldLegend variant="label">Comics</FieldLegend>
-                  <FieldDescription>Pick every comic this character appears in.</FieldDescription>
-                  {!comicsLoading && comics.length === 0 && (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                      No comics yet. Create one on the Comics page first.
-                    </p>
-                  )}
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {comics.map((u) => {
-                      const checked = value.includes(u.slug);
-                      return (
-                        <FieldLabel key={u.slug} htmlFor={`comic-${u.slug}`}>
-                          <Field orientation="horizontal">
-                            <Checkbox
-                              id={`comic-${u.slug}`}
-                              checked={checked}
-                              disabled={isSubmitting}
-                              onCheckedChange={(on) =>
-                                onChange(on ? [...value, u.slug] : value.filter((slug) => slug !== u.slug))
-                              }
-                            />
-                            <FieldContent>
-                              <FieldTitle>
-                                <span className="size-2.5 rounded-full" style={{ backgroundColor: u.palette.accent }} />
-                                {u.name}
-                              </FieldTitle>
-                              <FieldDescription className="text-xs">{u.genre.replace('[PLACEHOLDER] ', '')}</FieldDescription>
-                            </FieldContent>
-                          </Field>
-                        </FieldLabel>
-                      );
-                    })}
-                  </div>
-                  <FieldError errors={[errors.comics]} />
-                </FieldSet>
-              )}
-            />
-
-            <Field className="sm:w-40">
-              <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
-              <Input type="number" {...field('sortOrder')} />
-              <FieldDescription>Lower shows first.</FieldDescription>
-            </Field>
-          </FieldGroup>
-        </div>
-
-        <SheetFooter className="flex-row justify-end border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">{character ? 'Save changes' : 'Add character'}</Button>
-        </SheetFooter>
-      </fieldset>
-    </form>
+          <SheetFooter className="flex-row justify-end border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <SubmitButton>{character ? 'Save changes' : 'Add character'}</SubmitButton>
+          </SheetFooter>
+        </fieldset>
+      </form>
+    </UploadScope>
   );
 }
 

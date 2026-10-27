@@ -43,6 +43,7 @@ import {
   type Rejected,
 } from './optimistic';
 import { Bone, Loading, PageHeader, Saving, TabCount, times } from './ui';
+import { ImageInput, SubmitButton, UploadImagesButton, UploadScope } from './upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -255,6 +256,52 @@ function TextField({
   );
 }
 
+/** Image paths in the form, each one uploadable to Cloudinary */
+type ImagePath = 'hero.poster' | 'story.image' | 'face.image';
+
+/** Label + URL input with an Upload button + error, like TextField */
+function ImageField({
+  label,
+  name,
+  control,
+  error,
+  required,
+  description,
+  className,
+}: {
+  label: string;
+  name: ImagePath;
+  control: Control<FormValues>;
+  error?: { message?: string };
+  required?: string;
+  description?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Field data-invalid={!!error} className={className}>
+      <FieldLabel htmlFor={name}>{label}</FieldLabel>
+      <Controller
+        control={control}
+        name={name}
+        rules={{ required }}
+        render={({ field: { value, onChange, onBlur }, formState: { isSubmitting } }) => (
+          <ImageInput
+            id={name}
+            folder="comics"
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            invalid={!!error}
+            disabled={isSubmitting}
+          />
+        )}
+      />
+      {description && <FieldDescription>{description}</FieldDescription>}
+      <FieldError errors={[error]} />
+    </Field>
+  );
+}
+
 /** Native colour picker next to a hex input, both bound to the same value */
 function ColorField({ label, name, control }: { label: string; name: `palette.${keyof FormValues['palette']}`; control: Control<FormValues> }) {
   return (
@@ -334,11 +381,21 @@ function GalleryEditor({ control, register, errors }: FieldProps & { control: Co
               )}
             </div>
             <div className="grid flex-1 gap-2">
-              <Input
-                placeholder="Image URL"
-                aria-label={`Image ${i + 1} URL`}
-                aria-invalid={!!errors.gallery?.images?.[i]?.src}
-                {...register(`gallery.images.${i}.src`, { required: 'Image URL is required' })}
+              <Controller
+                control={control}
+                name={`gallery.images.${i}.src`}
+                rules={{ required: 'Image is required' }}
+                render={({ field: { value, onChange, onBlur }, formState: { isSubmitting } }) => (
+                  <ImageInput
+                    folder="comics"
+                    aria-label={`Image ${i + 1} URL`}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    invalid={!!errors.gallery?.images?.[i]?.src}
+                    disabled={isSubmitting}
+                  />
+                )}
               />
               <Input placeholder="Caption" aria-label={`Image ${i + 1} caption`} {...register(`gallery.images.${i}.caption`)} />
             </div>
@@ -373,9 +430,12 @@ function GalleryEditor({ control, register, errors }: FieldProps & { control: Co
           <p className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">No images yet.</p>
         )}
       </div>
-      <Button type="button" variant="outline" className="w-fit" onClick={() => append({ src: '', caption: '' })}>
-        <PlusIcon /> Add image
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <UploadImagesButton folder="comics" onUploaded={(urls) => append(urls.map((src) => ({ src, caption: '' })))} />
+        <Button type="button" variant="outline" className="w-fit" onClick={() => append({ src: '', caption: '' })}>
+          <PlusIcon /> Add by URL
+        </Button>
+      </div>
     </FieldSet>
   );
 }
@@ -474,290 +534,298 @@ function ComicForm({
   });
 
   return (
-    <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-      <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <Tabs value={section} onValueChange={(v) => setSection(v as SectionId)} className="min-h-0 flex-1 gap-0">
-          <div className="border-b px-4 py-2">
-            <TabsList variant="line" className="h-auto flex-wrap justify-start">
-              {SECTIONS.map((s) => (
-                <TabsTrigger key={s.id} value={s.id} className="flex-none px-2">
-                  {s.label}
-                  {flagged.has(s.id) && <span className="size-1.5 rounded-full bg-destructive" aria-label="has errors" />}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+    <UploadScope>
+      <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <fieldset disabled={isSubmitting} className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Tabs value={section} onValueChange={(v) => setSection(v as SectionId)} className="min-h-0 flex-1 gap-0">
+            <div className="border-b px-4 py-2">
+              <TabsList variant="line" className="h-auto flex-wrap justify-start">
+                {SECTIONS.map((s) => (
+                  <TabsTrigger key={s.id} value={s.id} className="flex-none px-2">
+                    {s.label}
+                    {flagged.has(s.id) && <span className="size-1.5 rounded-full bg-destructive" aria-label="has errors" />}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
-          <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
-            {rejected && (
-              <Alert variant="destructive" className="mb-5">
-                <TriangleAlertIcon />
-                <AlertTitle>Couldn&apos;t save</AlertTitle>
-                <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
-              </Alert>
-            )}
+            <div className="flex-1 overflow-y-auto p-4" data-lenis-prevent>
+              {rejected && (
+                <Alert variant="destructive" className="mb-5">
+                  <TriangleAlertIcon />
+                  <AlertTitle>Couldn&apos;t save</AlertTitle>
+                  <AlertDescription>{errorMessage(rejected.error, 'Could not reach the server')}</AlertDescription>
+                </Alert>
+              )}
 
-            {/* keepMounted: hidden tabs still validate and keep their values */}
-            <TabsContent value="basics" keepMounted>
-              <FieldGroup>
-                <Field data-invalid={!!errors.name}>
-                  <FieldLabel htmlFor="name">Name</FieldLabel>
-                  <Input id="name" placeholder="The Boundless Loop" aria-invalid={!!errors.name} {...nameField} />
-                  <FieldError errors={[errors.name]} />
-                </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
+              {/* keepMounted: hidden tabs still validate and keep their values */}
+              <TabsContent value="basics" keepMounted>
+                <FieldGroup>
+                  <Field data-invalid={!!errors.name}>
+                    <FieldLabel htmlFor="name">Name</FieldLabel>
+                    <Input id="name" placeholder="The Boundless Loop" aria-invalid={!!errors.name} {...nameField} />
+                    <FieldError errors={[errors.name]} />
+                  </Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <TextField
+                      label="Slug"
+                      name="slug"
+                      register={register}
+                      error={errors.slug}
+                      required="Slug is required"
+                      placeholder="boundless-loop"
+                      description={comic ? 'Changing it moves the page. Links from characters and campaigns follow.' : 'The page address, e.g. /boundless-loop'}
+                    />
+                    <TextField
+                      label="Short name"
+                      name="shortName"
+                      register={register}
+                      error={errors.shortName}
+                      required="Short name is required"
+                      placeholder="Boundless Loop"
+                      description="For the nav and cards."
+                    />
+                  </div>
+                  <TextField label="Overline" name="overline" register={register} placeholder="The Kat Chronicle" description="Optional. Sits above the name." />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel>World</FieldLabel>
+                      <Controller
+                        control={control}
+                        name="worldSlug"
+                        render={({ field }) => (
+                          <Select items={worldItems} value={field.value} onValueChange={(v) => field.onChange(v)} disabled={isSubmitting}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(worldItems).map(([slug, label]) => (
+                                <SelectItem key={slug} value={slug}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      <FieldDescription>From config/worlds.</FieldDescription>
+                    </Field>
+                    <TextField label="Genre" name="genre" register={register} error={errors.genre} required="Genre is required" placeholder="Gaming" />
+                  </div>
                   <TextField
-                    label="Slug"
-                    name="slug"
+                    label="Hook"
+                    name="hook"
                     register={register}
-                    error={errors.slug}
-                    required="Slug is required"
-                    placeholder="boundless-loop"
-                    description={comic ? 'Changing it moves the page. Links from characters and campaigns follow.' : 'The page address, e.g. /boundless-loop'}
+                    error={errors.hook}
+                    required="Hook is required"
+                    placeholder="The perfect world you designed becomes your prison."
                   />
-                  <TextField
-                    label="Short name"
-                    name="shortName"
-                    register={register}
-                    error={errors.shortName}
-                    required="Short name is required"
-                    placeholder="Boundless Loop"
-                    description="For the nav and cards."
-                  />
-                </div>
-                <TextField label="Overline" name="overline" register={register} placeholder="The Kat Chronicle" description="Optional. Sits above the name." />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field>
-                    <FieldLabel>World</FieldLabel>
+                  <div className="grid items-start gap-4 sm:grid-cols-2">
                     <Controller
                       control={control}
-                      name="worldSlug"
+                      name="published"
                       render={({ field }) => (
-                        <Select items={worldItems} value={field.value} onValueChange={(v) => field.onChange(v)} disabled={isSubmitting}>
+                        <FieldLabel htmlFor="published">
+                          <Field orientation="horizontal">
+                            <FieldContent>
+                              <span className="font-medium">Published</span>
+                              <FieldDescription>Show it on the site.</FieldDescription>
+                            </FieldContent>
+                            <Switch id="published" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                          </Field>
+                        </FieldLabel>
+                      )}
+                    />
+                    <Field>
+                      <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
+                      <Input id="sortOrder" type="number" {...register('sortOrder')} />
+                      <FieldDescription>Lower shows first within its world.</FieldDescription>
+                    </Field>
+                  </div>
+                </FieldGroup>
+              </TabsContent>
+
+              <TabsContent value="look" keepMounted>
+                <FieldGroup>
+                  <LookPreview control={control} />
+                  <Field>
+                    <FieldLabel>Display face</FieldLabel>
+                    <Controller
+                      control={control}
+                      name="display"
+                      render={({ field }) => (
+                        <Select items={displayItems} value={field.value} onValueChange={(v) => field.onChange(v)} disabled={isSubmitting}>
                           <SelectTrigger className="w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {Object.entries(worldItems).map(([slug, label]) => (
-                              <SelectItem key={slug} value={slug}>
-                                {label}
+                            {COMIC_DISPLAYS.map((d) => (
+                              <SelectItem key={d} value={d}>
+                                <span className={cn('text-base', displayFontClass[d])}>Aa</span>
+                                {displayItems[d]}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       )}
                     />
-                    <FieldDescription>From config/worlds.</FieldDescription>
                   </Field>
-                  <TextField label="Genre" name="genre" register={register} error={errors.genre} required="Genre is required" placeholder="Gaming" />
-                </div>
-                <TextField
-                  label="Hook"
-                  name="hook"
-                  register={register}
-                  error={errors.hook}
-                  required="Hook is required"
-                  placeholder="The perfect world you designed becomes your prison."
-                />
-                <div className="grid items-start gap-4 sm:grid-cols-2">
+                  <FieldSet>
+                    <FieldLegend variant="label">Palette</FieldLegend>
+                    <FieldDescription>Ink is the page ground, paper the text on it.</FieldDescription>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <ColorField label="Ink" name="palette.ink" control={control} />
+                      <ColorField label="Paper" name="palette.paper" control={control} />
+                      <ColorField label="Accent" name="palette.accent" control={control} />
+                      <ColorField label="Soft accent" name="palette.accentSoft" control={control} />
+                    </div>
+                  </FieldSet>
+                </FieldGroup>
+              </TabsContent>
+
+              <TabsContent value="story" keepMounted>
+                <FieldGroup>
+                  <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed bg-muted/30">
+                    {posterUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={posterUrl} alt="" className="absolute inset-0 size-full object-cover" />
+                    ) : (
+                      <span className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Hero poster</span>
+                    )}
+                  </div>
+                  <ImageField
+                    label="Hero poster"
+                    name="hero.poster"
+                    control={control}
+                    error={errors.hero?.poster}
+                    required="Hero poster is required"
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <TextField label="Hero video" name="hero.video" register={register} placeholder="/assets/venom.mp4" description="Optional." />
+                    <TextField label="Video note" name="hero.videoNote" register={register} placeholder="Video → story snippets → …" />
+                  </div>
+                  <TextField
+                    label="Story headline"
+                    name="story.headline"
+                    register={register}
+                    error={errors.story?.headline}
+                    required="Story headline is required"
+                  />
+                  <TextField label="Story" name="story.text" register={register} error={errors.story?.text} required="Story is required" multiline />
+                  <TextField label="More story" name="story.more" register={register} multiline description="Optional second paragraph." />
+                  <div className="flex items-end gap-3">
+                    <ImageField label="Story image" name="story.image" control={control} description="Optional." className="flex-1" />
+                    {storyImage && (
+                      <div className="relative mb-6 size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={storyImage} alt="" className="absolute inset-0 size-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </FieldGroup>
+              </TabsContent>
+
+              <TabsContent value="gallery" keepMounted>
+                <FieldGroup>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <TextField
+                      label="Gallery title"
+                      name="gallery.title"
+                      register={register}
+                      error={errors.gallery?.title}
+                      required="Gallery title is required"
+                      placeholder="A Taste of What's Inside"
+                    />
+                    <TextField label="Note" name="gallery.note" register={register} description="Optional, for the team." />
+                  </div>
+                  <GalleryEditor control={control} register={register} errors={errors} />
+                </FieldGroup>
+              </TabsContent>
+
+              <TabsContent value="cta" keepMounted>
+                <FieldGroup>
+                  <TextField
+                    label="CTA headline"
+                    name="cta.headline"
+                    register={register}
+                    error={errors.cta?.headline}
+                    required="CTA headline is required"
+                    placeholder="They took the gold. Now take home the story."
+                  />
+                  <CtaButtonsEditor control={control} register={register} errors={errors} />
+                  <TextField
+                    label="Signup line"
+                    name="signupLine"
+                    register={register}
+                    error={errors.signupLine}
+                    required="Signup line is required"
+                    placeholder="Ride with us. Get the next drop first."
+                  />
+
                   <Controller
                     control={control}
-                    name="published"
+                    name="hasFace"
                     render={({ field }) => (
-                      <FieldLabel htmlFor="published">
+                      <FieldLabel htmlFor="hasFace">
                         <Field orientation="horizontal">
                           <FieldContent>
-                            <span className="font-medium">Published</span>
-                            <FieldDescription>Show it on the site.</FieldDescription>
+                            <span className="font-medium">Collaborator</span>
+                            <FieldDescription>A real face behind the comic, e.g. a model or co-creator.</FieldDescription>
                           </FieldContent>
-                          <Switch id="published" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                          <Switch id="hasFace" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                         </Field>
                       </FieldLabel>
                     )}
                   />
-                  <Field>
-                    <FieldLabel htmlFor="sortOrder">Sort order</FieldLabel>
-                    <Input id="sortOrder" type="number" {...register('sortOrder')} />
-                    <FieldDescription>Lower shows first within its world.</FieldDescription>
-                  </Field>
-                </div>
-              </FieldGroup>
-            </TabsContent>
-
-            <TabsContent value="look" keepMounted>
-              <FieldGroup>
-                <LookPreview control={control} />
-                <Field>
-                  <FieldLabel>Display face</FieldLabel>
-                  <Controller
-                    control={control}
-                    name="display"
-                    render={({ field }) => (
-                      <Select items={displayItems} value={field.value} onValueChange={(v) => field.onChange(v)} disabled={isSubmitting}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {COMIC_DISPLAYS.map((d) => (
-                            <SelectItem key={d} value={d}>
-                              <span className={cn('text-base', displayFontClass[d])}>Aa</span>
-                              {displayItems[d]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </Field>
-                <FieldSet>
-                  <FieldLegend variant="label">Palette</FieldLegend>
-                  <FieldDescription>Ink is the page ground, paper the text on it.</FieldDescription>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <ColorField label="Ink" name="palette.ink" control={control} />
-                    <ColorField label="Paper" name="palette.paper" control={control} />
-                    <ColorField label="Accent" name="palette.accent" control={control} />
-                    <ColorField label="Soft accent" name="palette.accentSoft" control={control} />
-                  </div>
-                </FieldSet>
-              </FieldGroup>
-            </TabsContent>
-
-            <TabsContent value="story" keepMounted>
-              <FieldGroup>
-                <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed bg-muted/30">
-                  {posterUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={posterUrl} alt="" className="absolute inset-0 size-full object-cover" />
-                  ) : (
-                    <span className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Hero poster</span>
-                  )}
-                </div>
-                <TextField
-                  label="Hero poster"
-                  name="hero.poster"
-                  register={register}
-                  error={errors.hero?.poster}
-                  required="Hero poster is required"
-                  placeholder="https://… or /assets/…"
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <TextField label="Hero video" name="hero.video" register={register} placeholder="/assets/venom.mp4" description="Optional." />
-                  <TextField label="Video note" name="hero.videoNote" register={register} placeholder="Video → story snippets → …" />
-                </div>
-                <TextField
-                  label="Story headline"
-                  name="story.headline"
-                  register={register}
-                  error={errors.story?.headline}
-                  required="Story headline is required"
-                />
-                <TextField label="Story" name="story.text" register={register} error={errors.story?.text} required="Story is required" multiline />
-                <TextField label="More story" name="story.more" register={register} multiline description="Optional second paragraph." />
-                <div className="flex items-end gap-3">
-                  <TextField label="Story image" name="story.image" register={register} description="Optional." className="flex-1" />
-                  {storyImage && (
-                    <div className="relative mb-6 size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={storyImage} alt="" className="absolute inset-0 size-full object-cover" />
+                  {hasFace && (
+                    <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
+                      <TextField label="Name" name="face.name" register={register} error={errors.face?.name} required="Name is required" />
+                      <TextField label="Tag" name="face.tag" register={register} error={errors.face?.tag} required="Tag is required" placeholder="Collaborator" />
+                      <TextField
+                        label="Bio"
+                        name="face.bio"
+                        register={register}
+                        error={errors.face?.bio}
+                        required="Bio is required"
+                        multiline
+                        className="sm:col-span-2"
+                      />
+                      <TextField label="Link" name="face.href" register={register} error={errors.face?.href} required="Link is required" />
+                      <ImageField
+                        label="Image"
+                        name="face.image"
+                        control={control}
+                        error={errors.face?.image}
+                        required="Image is required"
+                        className="sm:col-span-2"
+                      />
                     </div>
                   )}
-                </div>
-              </FieldGroup>
-            </TabsContent>
+                </FieldGroup>
+              </TabsContent>
 
-            <TabsContent value="gallery" keepMounted>
-              <FieldGroup>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <TextField
-                    label="Gallery title"
-                    name="gallery.title"
-                    register={register}
-                    error={errors.gallery?.title}
-                    required="Gallery title is required"
-                    placeholder="A Taste of What's Inside"
-                  />
-                  <TextField label="Note" name="gallery.note" register={register} description="Optional, for the team." />
-                </div>
-                <GalleryEditor control={control} register={register} errors={errors} />
-              </FieldGroup>
-            </TabsContent>
+              <TabsContent value="notes" keepMounted>
+                <FieldGroup>
+                  <FieldDescription>Design-direction notes for the team. None of these show on the site.</FieldDescription>
+                  <TextField label="Type" name="direction.type" register={register} multiline />
+                  <TextField label="Motion" name="direction.motion" register={register} multiline />
+                  <TextField label="Cursor" name="direction.cursor" register={register} multiline />
+                  <TextField label="Character reveal" name="direction.reveal" register={register} multiline />
+                  <TextField label="Gallery treatment" name="direction.gallery" register={register} multiline />
+                </FieldGroup>
+              </TabsContent>
+            </div>
+          </Tabs>
 
-            <TabsContent value="cta" keepMounted>
-              <FieldGroup>
-                <TextField
-                  label="CTA headline"
-                  name="cta.headline"
-                  register={register}
-                  error={errors.cta?.headline}
-                  required="CTA headline is required"
-                  placeholder="They took the gold. Now take home the story."
-                />
-                <CtaButtonsEditor control={control} register={register} errors={errors} />
-                <TextField
-                  label="Signup line"
-                  name="signupLine"
-                  register={register}
-                  error={errors.signupLine}
-                  required="Signup line is required"
-                  placeholder="Ride with us. Get the next drop first."
-                />
-
-                <Controller
-                  control={control}
-                  name="hasFace"
-                  render={({ field }) => (
-                    <FieldLabel htmlFor="hasFace">
-                      <Field orientation="horizontal">
-                        <FieldContent>
-                          <span className="font-medium">Collaborator</span>
-                          <FieldDescription>A real face behind the comic, e.g. a model or co-creator.</FieldDescription>
-                        </FieldContent>
-                        <Switch id="hasFace" checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
-                      </Field>
-                    </FieldLabel>
-                  )}
-                />
-                {hasFace && (
-                  <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
-                    <TextField label="Name" name="face.name" register={register} error={errors.face?.name} required="Name is required" />
-                    <TextField label="Tag" name="face.tag" register={register} error={errors.face?.tag} required="Tag is required" placeholder="Collaborator" />
-                    <TextField
-                      label="Bio"
-                      name="face.bio"
-                      register={register}
-                      error={errors.face?.bio}
-                      required="Bio is required"
-                      multiline
-                      className="sm:col-span-2"
-                    />
-                    <TextField label="Link" name="face.href" register={register} error={errors.face?.href} required="Link is required" />
-                    <TextField label="Image" name="face.image" register={register} error={errors.face?.image} required="Image is required" />
-                  </div>
-                )}
-              </FieldGroup>
-            </TabsContent>
-
-            <TabsContent value="notes" keepMounted>
-              <FieldGroup>
-                <FieldDescription>Design-direction notes for the team. None of these show on the site.</FieldDescription>
-                <TextField label="Type" name="direction.type" register={register} multiline />
-                <TextField label="Motion" name="direction.motion" register={register} multiline />
-                <TextField label="Cursor" name="direction.cursor" register={register} multiline />
-                <TextField label="Character reveal" name="direction.reveal" register={register} multiline />
-                <TextField label="Gallery treatment" name="direction.gallery" register={register} multiline />
-              </FieldGroup>
-            </TabsContent>
-          </div>
-        </Tabs>
-
-        <SheetFooter className="flex-row justify-end border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit">{comic ? 'Save changes' : 'Create comic'}</Button>
-        </SheetFooter>
-      </fieldset>
-    </form>
+          <SheetFooter className="flex-row justify-end border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <SubmitButton>{comic ? 'Save changes' : 'Create comic'}</SubmitButton>
+          </SheetFooter>
+        </fieldset>
+      </form>
+    </UploadScope>
   );
 }
 
