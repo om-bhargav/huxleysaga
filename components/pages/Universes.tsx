@@ -43,7 +43,7 @@ export default function Universes() {
   if (universesLoading || statsLoading || !stats) return <PageLoader label="Loading universes" />;
 
   return (
-    <div className="relative z-10 grid gap-8 md:gap-20 bg-background">
+    <div className="relative z-10 grid gap-8 md:gap-20 bg-background max-md:pb-4 pb-10">
       <UniversesHero />
       <section className="px-3 font-heading uppercase">
         <SectionIntro

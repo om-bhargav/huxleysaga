@@ -11,7 +11,11 @@ export const characterCreateSchema = z.object({
   copy: text('Bio'),
   power: optionalText,
   role: text('Role'),
-  image: text('Image'),
+  /* Image URLs in display order; the first is the portrait */
+  images: z
+    .array(text('Image'))
+    .min(1, 'Add at least one image')
+    .transform((urls) => [...new Set(urls)]),
   sortOrder: z.number().int().optional(),
   comics: z
     /* Slugs of comics in the database; an unknown one comes back as a 422 from the foreign key */
