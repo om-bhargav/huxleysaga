@@ -7,8 +7,8 @@ import { failure, success } from '@/lib/api/response';
 /** Where each admin page's uploads go on Cloudinary, under huxleysaga/ */
 const FOLDERS = ['comics', 'characters', 'campaigns', 'testimonials'];
 
-/** Cloudinary's limit for an image on the free plan */
-const MAX_BYTES = 10 * 1024 * 1024;
+/** The most an uploaded image can weigh */
+const MAX_BYTES = 5 * 1024 * 1024;
 
 /** POST /api/uploads with form data { file, folder }. Answers with the Cloudinary URL. */
 export async function POST(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   if (!(file instanceof File)) return failure('No file sent', 400);
   if (!file.type.startsWith('image/')) return failure(`${file.name} isn't an image`, 422);
-  if (file.size > MAX_BYTES) return failure(`${file.name} is over 10 MB`, 422);
+  if (file.size > MAX_BYTES) return failure(`${file.name} is over 5 MB`, 413);
   if (typeof folder !== 'string' || !FOLDERS.includes(folder)) return failure('Unknown upload folder', 422);
 
   try {

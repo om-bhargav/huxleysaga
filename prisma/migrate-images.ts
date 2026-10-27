@@ -18,7 +18,7 @@
  */
 import 'dotenv/config';
 import { createHash } from 'node:crypto';
-import { access } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import cloudinary from '@/lib/cloudinary';
 import type { ComicFace, ComicHero, ComicStory } from '@/lib/comics/types';
@@ -42,6 +42,10 @@ const moved = new Map<string, string>();
 const failed: { url: string; where: string; reason: string }[] = [];
 let uploads = 0;
 
+/** Same limit as admin uploads (app/api/uploads): bigger images stay where they are and are listed at the end */
+const MAX_BYTES = 5 * 1024 * 1024;
+const tooBig = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB; images can be 5 MB at most`;
+
 /* Some CDNs turn away requests that don't look like a browser, so downloads go out looking like one */
 const BROWSER_HEADERS = {
   'User-Agent':
@@ -60,8 +64,13 @@ async function download(url: string) {
     throw new Error(`Download failed: got ${type}, not an image`);
   }
 
+  /* Skip the download when the CDN says up front that it's too big */
+  const declared = Number(res.headers.get('content-length'));
+  if (declared > MAX_BYTES) throw new Error(tooBig(declared));
+
   const bytes = Buffer.from(await res.arrayBuffer());
   if (!bytes.length) throw new Error('Download failed: empty response');
+  if (bytes.length > MAX_BYTES) throw new Error(tooBig(bytes.length));
   return { dataUri: `data:${type};base64,${bytes.toString('base64')}`, size: bytes.length };
 }
 
@@ -70,7 +79,8 @@ async function source(url: string) {
   if (/^https?:\/\//.test(url)) return (await download(url)).dataUri;
 
   const file = path.join(process.cwd(), 'public', decodeURIComponent(url.split(/[?#]/)[0]));
-  await access(file); // a clearer error than the SDK's when the file isn't there
+  const { size } = await stat(file); // also a clearer error than the SDK's when the file isn't there
+  if (size > MAX_BYTES) throw new Error(tooBig(size));
   return file;
 }
 

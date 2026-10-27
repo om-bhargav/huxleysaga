@@ -17,8 +17,15 @@ import { errorMessage } from './optimistic';
 /** The Cloudinary folder each admin page uploads to (checked again by /api/uploads) */
 export type UploadFolder = 'comics' | 'characters' | 'campaigns' | 'testimonials';
 
+/** The most an image can weigh; /api/uploads enforces it too */
+const MAX_BYTES = 5 * 1024 * 1024;
+
 /** Uploads one image and resolves with the URL Cloudinary serves it from */
 export async function uploadImage(file: File, folder: UploadFolder) {
+  /* Checked here too, so a big file fails at once instead of after it's been sent */
+  if (!file.type.startsWith('image/')) throw new Error(`${file.name} isn't an image`);
+  if (file.size > MAX_BYTES) throw new Error(`${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB; images can be 5 MB at most`);
+
   const body = new FormData();
   body.set('file', file);
   body.set('folder', folder);
