@@ -78,15 +78,14 @@ export default function FinalCta({
             The night is just getting started
           </motion.p>
 
-          <motion.div {...rise(0.1)} className="mt-3 w-full min-w-0 overflow-hidden">
+          {/* <motion.div {...rise(0.1)} className="mt-3 w-full min-w-0 overflow-hidden">
             <h2 className="sr-only">Night O’Clock</h2>
             <div aria-hidden="true">
-              {/* Card has padding on both sides, so the word gets a touch less than the full 12vw on phones */}
-              <StretchText className="font-heading text-[10.5vw] leading-[0.85] sm:text-[12vw]">
+             <StretchText className="font-heading text-[10.5vw] leading-[0.85] sm:text-[12vw]">
                 NIGHT O&apos;CLOCK
               </StretchText>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           <motion.ul {...rise(0.2)} className="mt-6 flex flex-wrap gap-x-4 gap-y-2 sm:mt-8 sm:gap-x-6">
             {ctas.map((cta) => (

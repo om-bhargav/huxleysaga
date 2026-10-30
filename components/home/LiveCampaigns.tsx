@@ -7,9 +7,8 @@ import { RollingNumber } from '@/components/shared/RollingNumber'; // adjust pat
 import { BracketButton } from '@/components/shared/BracketButton'; // adjust path
 import { cardReveal } from '@/components/products/ProductCard'; // adjust path
 import { SectionIntro, flicker } from '@/components/shared/SectionIntro'; // adjust path
-import { Marquee } from '@/components/shared/Marquee'; // adjust path
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay } from 'swiper/modules';
+import { Autoplay, Keyboard, Mousewheel } from 'swiper/modules';
 import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
 import { useCampaigns } from '@/hooks/useCampaigns';
@@ -48,8 +47,6 @@ const toCard = (c: CampaignDTO): Campaign => ({
   button: { label: c.buttonLabel, href: c.buttonHref },
 });
 
-const CARD_WIDTH = 'w-full md:w-[min(86vw,480px)]';
-
 /** Label above value, in the same muted-key rhythm as the product cards */
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -60,13 +57,17 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CampaignCard({ campaign, className = CARD_WIDTH }: { campaign: Campaign; className?: string }) {
+function CampaignCard({ campaign, className = 'w-full' }: { campaign: Campaign; className?: string }) {
   return (
     <GlitchScope>
       <article className={`flex shrink-0 flex-col border border-white/10 bg-neutral-950 text-white ${className}`}>
         {/* Still from the campaign, glitches when the link below is hovered */}
         <div className="relative aspect-3/2 overflow-hidden">
-          <GlitchImage src={campaign.image} alt={campaign.title} sizes="(min-width: 560px) 480px, 86vw" />
+          <GlitchImage
+            src={campaign.image}
+            alt={campaign.title}
+            sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+          />
 
           {/* Live tag, blinks like a recording light */}
           <div className="absolute left-3 top-3 flex items-center gap-2 border border-white/20 bg-black/70 px-2 py-1 text-[10px] tracking-widest backdrop-blur-sm sm:text-[11px]">
@@ -131,7 +132,7 @@ function CampaignCard({ campaign, className = CARD_WIDTH }: { campaign: Campaign
 }
 
 /** Same shape and size as CampaignCard, so nothing jumps when the real cards arrive */
-function CampaignSkeleton({ className = CARD_WIDTH }: { className?: string }) {
+function CampaignSkeleton({ className = 'w-full' }: { className?: string }) {
   const bar = 'animate-pulse bg-white/10';
   return (
     <div aria-hidden="true" className={`flex shrink-0 flex-col border border-white/10 bg-neutral-950 ${className}`}>
@@ -185,61 +186,87 @@ function NoCampaigns() {
   );
 }
 
-// How long each campaign stays on screen before the swiper moves on
+// How long each position stays on screen before the swiper moves on
 const AUTOPLAY_DELAY = 12_000; // ms
 
 /**
- * Phones: one card at a time in a Swiper, dragged by hand or advancing on its own.
- * There is no hover on a touch screen, so a drifting row can't be stopped there.
+ * One card on phones, two on tablets, three on wide screens.
+ * Drag, swipe, scroll sideways, or use the arrow keys; it advances on its own
+ * and pauses while the cursor is over it.
  */
 function CampaignSwiper({ campaigns }: { campaigns: Campaign[] }) {
+  const reduceMotion = useReducedMotion();
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [active, setActive] = useState(0);
+  // Number of positions it can stop at: fewer than the number of cards when several are visible
+  const [stops, setStops] = useState(1);
+
+  const sync = (instance: SwiperInstance) => {
+    setActive(instance.snapIndex);
+    setStops(instance.snapGrid.length);
+  };
 
   return (
-    <div className="md:hidden">
+    <div>
       <Swiper
-        modules={[Autoplay]}
-        onSwiper={setSwiper}
-        onSlideChange={(instance) => setActive(instance.activeIndex)}
+        modules={[Autoplay, Keyboard, Mousewheel]}
+        onSwiper={(instance) => {
+          setSwiper(instance);
+          sync(instance);
+        }}
+        onSlideChange={sync}
+        onSnapGridLengthChange={sync}
         slidesPerView={1}
         spaceBetween={12}
+        breakpoints={{
+          768: { slidesPerView: 2 },
+          1280: { slidesPerView: 3 },
+        }}
         rewind
-        autoplay={{ delay: AUTOPLAY_DELAY, disableOnInteraction: false }}
+        grabCursor
+        keyboard={{ enabled: true, onlyInViewport: true }}
+        mousewheel={{ forceToAxis: true }}
+        autoplay={
+          reduceMotion
+            ? false
+            : { delay: AUTOPLAY_DELAY, disableOnInteraction: false, pauseOnMouseEnter: true }
+        }
       >
         {campaigns.map((campaign) => (
-          /* Swiper sets the slide to full width; *:w-full stretches whatever wraps the card; h-auto + flex keeps heights equal */
+          /* h-auto + flex keeps every card in a row the same height */
           <SwiperSlide key={campaign.id} className="flex! h-auto! *:w-full">
             <CampaignCard campaign={campaign} />
           </SwiperSlide>
         ))}
       </Swiper>
 
-      {/* Position: one bar per campaign, the current one lit. Tap a bar to jump to it. */}
-      <div className="mt-2 flex">
-        {campaigns.map((campaign, i) => (
-          <button
-            key={campaign.id}
-            type="button"
-            aria-label={`Show ${campaign.title}`}
-            aria-current={i === active}
-            onClick={() => swiper?.slideTo(i)}
-            className="py-2 pr-1.5"
-          >
-            <span
-              className={`block h-0.5 w-6 transition-colors duration-300 ${i === active ? 'bg-white' : 'bg-white/15'}`}
-            />
-          </button>
-        ))}
-      </div>
+      {/* One bar per position, the current one lit. Hidden when everything already fits. */}
+      {stops > 1 && (
+        <div className="mt-2 flex">
+          {Array.from({ length: stops }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Show campaigns from ${i + 1}`}
+              aria-current={i === active}
+              onClick={() => swiper?.slideTo(i)}
+              className="py-2 pr-1.5"
+            >
+              <span
+                className={`block h-0.5 w-6 transition-colors duration-300 ${i === active ? 'bg-white' : 'bg-white/15'}`}
+              />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 /**
  * Live campaigns. The heading flickers in word by word like the saga intro,
- * then the cards scroll past on a loop that stops under the cursor.
- * On phones the loop is replaced by a swipeable row.
+ * then the cards sit in a swiper: one at a time on phones, two or three side
+ * by side on larger screens, advancing on their own.
  *
  * While loading, skeleton cards hold the space; if nothing is live, a short notice is shown.
  */
@@ -257,7 +284,6 @@ export default function LiveCampaigns({
   /** Pass campaigns to skip fetching; otherwise the LIVE ones come from /api/campaigns */
   campaigns?: Campaign[];
 }) {
-  const reduceMotion = useReducedMotion();
   const { campaigns: live, isLoading } = useCampaigns(campaignsProp ? null : { status: 'LIVE' });
   const campaigns = campaignsProp ?? live.map(toCard);
 
@@ -286,16 +312,23 @@ export default function LiveCampaigns({
             ) : (
               <>
                 <span className="md:hidden">Swipe to browse</span>
-                <span className="max-md:hidden">{reduceMotion ? 'Scroll the row to browse' : 'Hover to pause'}</span>
+                <span className="max-md:hidden">Drag to browse</span>
               </>
             )}
           </motion.p>
 
           {loading ? (
-            /* One skeleton on phones, a row of three on larger screens */
-            <div role="status" aria-label="Loading campaigns" className="mt-3 grid md:grid-cols-3 gap-3 overflow-hidden">
+            /* Same columns as the swiper: one on phones, two on tablets, three on wide screens */
+            <div
+              role="status"
+              aria-label="Loading campaigns"
+              className="mt-3 grid gap-3 overflow-hidden md:grid-cols-2 xl:grid-cols-3"
+            >
               {Array.from({ length: 3 }, (_, i) => (
-                <CampaignSkeleton key={i} className={`w-full ${i > 0 ? 'max-md:hidden' : ''}`} />
+                <CampaignSkeleton
+                  key={i}
+                  className={`w-full ${i > 0 ? 'max-md:hidden' : ''} ${i > 1 ? 'max-xl:hidden' : ''}`}
+                />
               ))}
             </div>
           ) : (
@@ -307,12 +340,6 @@ export default function LiveCampaigns({
               className="mt-3"
             >
               <CampaignSwiper campaigns={campaigns} />
-
-              <Marquee className="-mx-3 max-md:hidden">
-                {campaigns.map((campaign) => (
-                  <CampaignCard key={campaign.id} campaign={campaign} />
-                ))}
-              </Marquee>
             </motion.div>
           )}
         </>
