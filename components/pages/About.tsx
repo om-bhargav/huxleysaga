@@ -15,7 +15,6 @@ export default function About() {
       <AboutTimeline />
       <AboutQuote />
       <AboutPartners />
-      <AboutPress />
       <AboutStats />
       <AboutEvents />
     </div>

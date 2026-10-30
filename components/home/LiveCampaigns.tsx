@@ -293,9 +293,9 @@ export default function LiveCampaigns({
 
           {loading ? (
             /* One skeleton on phones, a row of three on larger screens */
-            <div role="status" aria-label="Loading campaigns" className="mt-3 flex gap-3 overflow-hidden">
+            <div role="status" aria-label="Loading campaigns" className="mt-3 grid md:grid-cols-3 gap-3 overflow-hidden">
               {Array.from({ length: 3 }, (_, i) => (
-                <CampaignSkeleton key={i} className={`${CARD_WIDTH} ${i > 0 ? 'max-md:hidden' : ''}`} />
+                <CampaignSkeleton key={i} className={`w-full ${i > 0 ? 'max-md:hidden' : ''}`} />
               ))}
             </div>
           ) : (

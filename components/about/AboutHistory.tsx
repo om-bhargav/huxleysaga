@@ -5,6 +5,7 @@ import { GlitchImage, GlitchScope } from '@/components/shared/GlitchImage'; // a
 import { BracketButton } from '@/components/shared/BracketButton'; // adjust path
 import { SectionIntro, flicker } from '@/components/shared/SectionIntro'; // adjust path
 import { SITE_NAME } from '@/config';
+import RevealImage from '../shared/RevealImage';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -63,10 +64,14 @@ export default function AboutHistory() {
               }}
               className="absolute inset-0"
             >
-              <GlitchImage
-                src="https://picsum.photos/seed/huxley-ben-mauro/1200/900"
+              <RevealImage
+                glitch
+                src="/about-1.png"
                 alt="Ben Mauro"
                 sizes="(min-width: 1024px) 48vw, 94vw"
+                direction="left-right"
+                duration={1.2}
+                className="size-full"
               />
               <span className="absolute bottom-3 left-3 border border-white/20 bg-black/70 px-2 py-1 text-[10px] tracking-widest text-white backdrop-blur-sm sm:text-[11px]">
                 Ben Mauro

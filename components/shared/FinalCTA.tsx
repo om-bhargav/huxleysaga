@@ -7,6 +7,7 @@ import { communityLinks, socialLinks, type ExternalLink } from '@/config/links';
 import { Divider } from '@/components/shared/Divider';
 import { StretchText } from '@/components/shared/StrechText';
 import { GATE_IMAGES } from '@/lib/assets';
+import RevealImage, { RevealDirection } from './RevealImage';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -38,7 +39,7 @@ export default function FinalCta({
   images?: string[];
 }) {
   return (
-    <section className="w-full overflow-x-clip px-3 pb-14 pt-5 uppercase text-white">
+    <section className="w-full overflow-x-clip px-3 pt-5 uppercase text-white">
       <Divider />
 
       <div className="relative mt-3 flex min-h-[70svh] w-full min-w-0 flex-col justify-end overflow-hidden border border-white/10 p-3 sm:p-5">
@@ -49,18 +50,23 @@ export default function FinalCta({
         >
           {Array.from({ length: 4 }, (_, i) => {
             const src = images[i];
-            return (
-              <div key={i} className="relative min-w-0 overflow-hidden bg-black">
-                {src && (
-                  <Image
-                    src={src}
-                    alt=""
-                    fill
-                    sizes="(min-width: 1024px) 25vw, 50vw"
-                    className="object-cover"
-                  />
-                )}
-              </div>
+            const direction: RevealDirection = i % 2 === 0 ? 'top-down' : 'bottom-up';
+
+            return src ? (
+              <RevealImage
+                key={i}
+                src={src}
+                alt=""
+                direction={direction}
+                delay={i * 0.12}
+                duration={1.2}
+                amount={0.2}
+                sizes="(min-width: 1024px) 25vw, 50vw"
+                unoptimized={false}
+                className="min-w-0 bg-black"
+              />
+            ) : (
+              <div key={i} className="min-w-0 bg-black" />
             );
           })}
         </div>

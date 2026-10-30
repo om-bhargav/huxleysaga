@@ -15,6 +15,7 @@ export default function Layout({ children }: ChildrenProps) {
           bg-background
           mb-122
           md:mb-90
+          pb-6
           shadow-[0_10px_20px_rgba(0,0,0,0.1)]
           "
       >

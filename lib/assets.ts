@@ -21,40 +21,24 @@ const image = (src: string, sizes = "100vw"): Asset => ({
 });
 const video = (src: string): Asset => ({ type: "video", src });
 
-// Slideshow in the loader itself
-export const LOADER_IMAGES = [
-  "https://picsum.photos/seed/shatter-1/1200/1200",
-  "https://picsum.photos/seed/shatter-2/1200/1200",
-  "https://picsum.photos/seed/shatter-3/1200/1200",
-  "https://picsum.photos/seed/shatter-4/1200/1200",
-  "https://picsum.photos/seed/shatter-5/1200/1200",
-];
-export const LOADER_IMAGE_SIZES = "(max-width: 525px) 80vw, 420px";
-
 // Cards that climb out of the film box (UniverseGate)
 export const GATE_IMAGES = [
-  "https://picsum.photos/seed/universe-1/600/800",
-  "https://picsum.photos/seed/universe-2/600/800",
-  "https://picsum.photos/seed/universe-3/600/800",
-  "https://picsum.photos/seed/universe-4/600/800",
-  "https://picsum.photos/seed/universe-5/600/800",
-  "https://picsum.photos/seed/universe-6/600/800",
+  "/characters/agent-scarlett/1.png",
+  "/characters/vipress/1.png",
+  "/characters/kat/4.png",
+  "/characters/Dracona/1.png",
 ];
 // Widest a card ever gets (36% of the 240px box)
 export const GATE_IMAGE_SIZES = "90px";
 
 // Full-bleed banners at the top of each page. Placeholders, swap for your own.
-export const HOME_HERO_IMAGE = "https://picsum.photos/seed/huxley/1920/1080";
-export const ABOUT_BANNER =
-  "https://picsum.photos/seed/huxley-about-1/1920/1080";
-export const CONTACT_BANNER =
-  "https://picsum.photos/seed/huxley-contact-1/1920/1080";
-export const UNIVERSES_BANNER =
-  "https://picsum.photos/seed/huxley-universes-1/1920/1080";
+export const HOME_HERO_IMAGE = "/assets/video-poster.png";
+export const ABOUT_BANNER = "/about.png";
+export const CONTACT_BANNER = "/contact.jpg";
+export const UNIVERSES_BANNER = "https://picsum.photos/seed/huxley-universes-1/1920/1080";
 
 // Needed on every page
 const SHARED_ASSETS: Asset[] = [
-  ...LOADER_IMAGES.map((src) => image(src, LOADER_IMAGE_SIZES)),
   ...GATE_IMAGES.map((src) => image(src, GATE_IMAGE_SIZES)),
 ];
 

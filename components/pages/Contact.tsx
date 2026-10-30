@@ -1,8 +1,6 @@
-import ContactChannels from "../contact/ContactChannels";
 import ContactFollow from "../contact/ContactFollow";
 import ContactHero from "../contact/ContactHero";
 import ContactIntro from "../contact/ContactIntro";
-import Loader from "../ui/spinner";
 
 export default function Contact() {
   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import { cn } from 'cn';
 import { animate, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
   FiChevronLeft,
@@ -15,6 +15,7 @@ import {
 import { StretchText } from '../shared/StrechText';
 import { SITE_NAME } from '@/config';
 import { HOME_HERO_IMAGE } from '@/lib/assets';
+import RevealImage from '../shared/RevealImage';
 
 const ease: [number, number, number, number] = [0.76, 0, 0.24, 1];
 
@@ -203,7 +204,7 @@ export default function Hero({
     });
     setMuted(next);
   };
-
+  const [firstFrameReady, setFirstFrameReady] = useState(false);
   return (
     <>
       <div aria-hidden="true" className="h-svh" />
@@ -232,12 +233,12 @@ export default function Hero({
                     videoRefs.current[i] = el;
                   }}
                   src={src}
-                  poster={i === 0 ? image : undefined}
                   autoPlay={i === 0}
                   muted={muted}
                   loop={!isSlider}
                   preload="auto"
                   playsInline
+                  onPlaying={i === 0 ? () => setFirstFrameReady(true) : undefined}
                   onEnded={
                     isSlider
                       ? () => {
@@ -252,12 +253,46 @@ export default function Hero({
                     // ignore the pause a video fires when it reaches its end
                     if (i === activeRef.current && !e.currentTarget.ended) setPaused(true);
                   }}
-                  className="size-full object-cover"
+                  className={cn(
+                    'size-full object-cover',
+                    i === 0 && 'transition-opacity duration-700 ease-out',
+                    i === 0 && !firstFrameReady && 'opacity-0',
+                  )}
                 />
+
+                {i === 0 && image && (
+                  <div
+                    aria-hidden
+                    className={cn(
+                      'pointer-events-none absolute inset-0 transition-opacity duration-700 ease-out',
+                      firstFrameReady && 'opacity-0',
+                    )}
+                  >
+                    <RevealImage
+                      src={image}
+                      alt=""
+                      trigger="mount"
+                      priority
+                      direction="bottom-up"
+                      duration={1.2}
+                      className="size-full"
+                    />
+                  </div>
+                )}
               </div>
             ))
           ) : (
-            <Image src={image} alt="" fill priority sizes="100vw" className="object-cover" />
+            <div className="absolute inset-0">
+              <RevealImage
+                src={image}
+                alt=""
+                trigger="mount"
+                priority
+                direction="bottom-up"
+                duration={1.2}
+                className="size-full"
+              />
+            </div>
           )}
         </motion.div>
 
